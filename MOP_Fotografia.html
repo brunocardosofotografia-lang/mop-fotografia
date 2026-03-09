@@ -677,11 +677,11 @@ function processRows(rows, weekName) {
 function renderAll() {
   renderHome();
   renderWeekSelector();
-  // Sync type toggle buttons
-  syncTypeToggle();
-  renderCards();
+  renderCards();  // renderCards calls renderFilterBar which renders the field view
   renderLoadedWeeks();
   renderReport();
+  // Sync toggle AFTER DOM is updated
+  setTimeout(syncTypeToggle, 0);
 
   const hasData = Object.keys(state.weeks).length > 0;
   document.getElementById('homeEmpty').style.display = hasData ? 'none' : 'block';
@@ -789,7 +789,7 @@ function selectWeek(w) {
   document.getElementById('currentWeekBadge').textContent = w;
   renderWeekSelector();
   // Sincronizar toggle visual
-  syncTypeToggle();
+  setTimeout(syncTypeToggle, 0);
   renderCards();
   saveState();
 }
@@ -839,7 +839,9 @@ function renderFilterBar() {
 
 // ── FIELD CARDS ────────────────────────────────────────────────
 function syncTypeToggle() {
-  document.querySelectorAll('.type-btn').forEach(b => {
+  const btns = document.querySelectorAll('.type-btn');
+  if (!btns.length) return; // DOM not ready yet
+  btns.forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-type') === state.activeType);
   });
 }
