@@ -345,6 +345,7 @@
   <div class="week-badge" id="currentWeekBadge">sem dados</div>
   <div class="header-actions">
     <button class="btn btn-ghost" style="padding:6px 14px; font-size:12px;" onclick="exportReport()">↓ Report</button>
+    <button class="btn btn-ghost" style="padding:6px 14px; font-size:12px;" onclick="exportProgress()">☁︎ Guardar</button>
   </div>
 </header>
 
@@ -410,6 +411,7 @@
     <div class="drop-sub">ou clica para selecionar · .xlsx · .xls</div>
   </div>
   <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+<input type="file" id="progressInput" accept=".json" onchange="importProgress(this.files[0])" style="display:none">
 
   <div class="upload-success" id="uploadSuccess"></div>
   <div class="import-stats" id="importStats"></div>
@@ -420,7 +422,18 @@
   </div>
 
   <div class="btn-row">
-    <button class="btn btn-danger" onclick="clearAllData()" style="font-size:12px;">🗑 Limpar todos os dados</button>
+    <div style="font-size:13px; color:var(--muted); margin-bottom:10px; font-weight:500;">SINCRONIZAÇÃO</div>
+  <div style="background:var(--surface); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); margin-bottom:16px;">
+    <div style="font-size:13px; color:var(--text2); margin-bottom:12px; line-height:1.5;">
+      Guarda o progresso num ficheiro JSON e carrega-o noutro dispositivo para sincronizar.
+    </div>
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn btn-primary" onclick="exportProgress()">↑ Exportar progresso</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('progressInput').click()">↓ Importar progresso</button>
+    </div>
+  </div>
+  <div style="font-size:13px; color:var(--muted); margin-bottom:10px; font-weight:500;">DADOS</div>
+  <button class="btn btn-danger" onclick="clearAllData()" style="font-size:12px;">🗑 Limpar todos os dados</button>
   </div>
 </div>
 
@@ -1068,6 +1081,51 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── SYNC PROGRESS ─────────────────────────────────────────────
+function exportProgress() {
+  const data = {
+    version: 1,
+    exported: new Date().toISOString(),
+    weeks: state.weeks,
+    progress: state.progress,
+    activeWeek: state.activeWeek
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
+  a.href = url;
+  a.download = `mop_progresso_${date}.json`;
+  a.click();
+  showToast('✓ Progresso exportado');
+}
+
+function importProgress(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.version || !data.progress) {
+        showToast('❌ Ficheiro inválido');
+        return;
+      }
+      // Merge — manter semanas locais e sobrescrever progresso
+      if (data.weeks) state.weeks = { ...state.weeks, ...data.weeks };
+      if (data.progress) state.progress = { ...state.progress, ...data.progress };
+      if (data.activeWeek) state.activeWeek = data.activeWeek;
+      saveState();
+      renderAll();
+      showToast('✓ Progresso importado');
+      // Reset input
+      document.getElementById('progressInput').value = '';
+    } catch(e) {
+      showToast('❌ Erro ao ler o ficheiro');
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ── INIT ───────────────────────────────────────────────────────
