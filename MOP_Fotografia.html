@@ -321,6 +321,22 @@
   }
   .toast.show { opacity: 1; }
 
+  /* ── TYPE TOGGLE ── */
+  .type-toggle {
+    display: flex; background: var(--surface2); border-radius: 10px;
+    padding: 3px; margin-bottom: 12px; gap: 3px;
+  }
+  .type-btn {
+    flex: 1; padding: 8px; border: none; border-radius: 8px;
+    background: transparent; color: var(--muted);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .type-btn.active {
+    background: var(--surface); color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+
   /* ── WEEK SELECTOR ── */
   .week-selector {
     display: flex; gap: 7px; margin-bottom: 14px; overflow-x: auto;
@@ -380,6 +396,10 @@
   </div>
   <div id="fieldContent" style="display:none">
     <div class="week-selector" id="weekSelector"></div>
+    <div class="type-toggle" id="typeToggle">
+      <button class="type-btn active" onclick="setType('digital', this)">Digitais</button>
+      <button class="type-btn" onclick="setType('analog', this)">Analógicos</button>
+    </div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="Pesquisar campanha..." oninput="renderCards()">
@@ -487,6 +507,7 @@ let state = {
   progress: {},   // { 'campaignId': { r: 0, m: 0, ip: 0, done: false } }
   activeWeek: null,
   activeFilter: 'all',
+  activeType: 'digital',
   currentTab: 'home'
 };
 
@@ -762,19 +783,21 @@ function renderWeekSelector() {
 
 function selectWeek(w) {
   state.activeWeek = w;
+  state.activeFilter = 'all';
   document.getElementById('currentWeekBadge').textContent = w;
   renderWeekSelector();
+  // Sincronizar toggle visual
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  const activeTypeBtn = document.querySelector(`.type-btn[onclick="setType('${state.activeType}', this)"]`);
+  if (activeTypeBtn) activeTypeBtn.classList.add('active');
   renderCards();
   saveState();
 }
 
 // ── FILTER BAR ────────────────────────────────────────────────
 function renderFilterBar() {
-  const week = state.activeWeek;
-  const campaigns = state.weeks[week]?.campaigns || [];
-  const hasAnalog  = campaigns.some(c => c.subtype === 'analog');
-  const hasDigital = campaigns.some(c => c.subtype !== 'analog');
   const bar = document.getElementById('filterBar');
+  const isAnalog = state.activeType === 'analog';
 
   let btns = `
     <button class="filter-btn active" onclick="setFilter('all', this)">Todas</button>
@@ -782,7 +805,7 @@ function renderFilterBar() {
     <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
   `;
 
-  if (hasDigital) btns += `
+  if (!isAnalog) btns += `
     <button class="filter-btn" onclick="setFilter('tv', this)">Ecrãs TV</button>
     <button class="filter-btn" onclick="setFilter('leds', this)">Led's</button>
     <button class="filter-btn" onclick="setFilter('4x3', this)">Led 4x3</button>
@@ -791,8 +814,7 @@ function renderFilterBar() {
     <button class="filter-btn" onclick="setFilter('3ecras', this)">3 Ecrãs</button>
   `;
 
-  if (hasAnalog) btns += `
-    <button class="filter-btn" onclick="setFilter('analog', this)">Analógicos</button>
+  if (isAnalog) btns += `
     <button class="filter-btn" onclick="setFilter('mupis', this)">Mupis</button>
     <button class="filter-btn" onclick="setFilter('ppa', this)">PPA</button>
     <button class="filter-btn" onclick="setFilter('8x3', this)">8x3</button>
@@ -805,7 +827,7 @@ function renderFilterBar() {
 
   bar.innerHTML = btns;
 
-  // Reactivar filtro atual se ainda existir, senão resetar
+  // Reactivar filtro atual se ainda existir, senão resetar para 'all'
   const activeBtn = bar.querySelector(`[onclick="setFilter('${state.activeFilter}', this)"]`);
   if (activeBtn) {
     bar.querySelector('.filter-btn').classList.remove('active');
@@ -816,6 +838,16 @@ function renderFilterBar() {
 }
 
 // ── FIELD CARDS ────────────────────────────────────────────────
+function setType(type, btn) {
+  state.activeType = type;
+  state.activeFilter = 'all';
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFilterBar();
+  renderCards();
+  saveState();
+}
+
 function setFilter(f, btn) {
   state.activeFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -832,6 +864,11 @@ function renderCards() {
   const filter = state.activeFilter;
 
   let filtered = campaigns.filter(c => {
+    // Filtrar por tipo (digital vs analógico)
+    const _isAnalog = state.activeType === 'analog';
+    if (_isAnalog && c.subtype !== 'analog') return false;
+    if (!_isAnalog && c.subtype === 'analog') return false;
+
     const id = campaignId(c);
     const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
     const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
