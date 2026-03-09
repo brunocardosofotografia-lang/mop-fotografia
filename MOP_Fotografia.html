@@ -397,8 +397,8 @@
   <div id="fieldContent" style="display:none">
     <div class="week-selector" id="weekSelector"></div>
     <div class="type-toggle" id="typeToggle">
-      <button class="type-btn active" onclick="setType('digital', this)">Digitais</button>
-      <button class="type-btn" onclick="setType('analog', this)">Analógicos</button>
+      <button class="type-btn active" data-type="digital" onclick="setType('digital', this)">Digitais</button>
+      <button class="type-btn" data-type="analog" onclick="setType('analog', this)">Analógicos</button>
     </div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
@@ -678,9 +678,7 @@ function renderAll() {
   renderHome();
   renderWeekSelector();
   // Sync type toggle buttons
-  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-  const activeTypeBtn = document.querySelector(`.type-btn[onclick="setType('${state.activeType}', this)"]`);
-  if (activeTypeBtn) activeTypeBtn.classList.add('active');
+  syncTypeToggle();
   renderCards();
   renderLoadedWeeks();
   renderReport();
@@ -791,9 +789,7 @@ function selectWeek(w) {
   document.getElementById('currentWeekBadge').textContent = w;
   renderWeekSelector();
   // Sincronizar toggle visual
-  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-  const activeTypeBtn = document.querySelector(`.type-btn[onclick="setType('${state.activeType}', this)"]`);
-  if (activeTypeBtn) activeTypeBtn.classList.add('active');
+  syncTypeToggle();
   renderCards();
   saveState();
 }
@@ -842,6 +838,12 @@ function renderFilterBar() {
 }
 
 // ── FIELD CARDS ────────────────────────────────────────────────
+function syncTypeToggle() {
+  document.querySelectorAll('.type-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-type') === state.activeType);
+  });
+}
+
 function setType(type, btn) {
   state.activeType = type;
   state.activeFilter = 'all';
