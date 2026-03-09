@@ -537,14 +537,14 @@ function handleFile(file) {
 }
 
 function askWeek() {
-  const week = prompt('Qual é a semana?\nEscreve W1, W2, W3, W4 ou W5:');
+  const week = prompt('Qual é o número da semana? (1 a 52)\nEx: 11 para a semana 11');
   if (!week) return null;
-  const clean = week.trim().toUpperCase();
-  if (!['W1','W2','W3','W4','W5'].includes(clean)) {
-    showToast('❌ Semana inválida — usa W1 a W5');
+  const num = parseInt(week.trim());
+  if (isNaN(num) || num < 1 || num > 52) {
+    showToast('❌ Semana inválida — usa um número de 1 a 52');
     return null;
   }
-  return clean;
+  return `S${num}`;
 }
 
 function processRows(rows, weekName) {
