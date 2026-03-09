@@ -520,13 +520,15 @@ dropZone.addEventListener('drop', e => {
 
 function handleFile(file) {
   if (!file) return;
+  const week = askWeek();
+  if (!week) return;
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const wb = XLSX.read(e.target.result, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      processRows(rows, file.name);
+      processRows(rows, week);
     } catch(err) {
       showToast('❌ Erro ao ler o ficheiro');
     }
@@ -534,10 +536,18 @@ function handleFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-function processRows(rows, filename) {
-  // Determine week name from filename
-  const weekMatch = filename.match(/W(\d+)/i);
-  const weekName = weekMatch ? `W${weekMatch[1]}` : `W${Object.keys(state.weeks).length + 1}`;
+function askWeek() {
+  const week = prompt('Qual é a semana?\nEscreve W1, W2, W3, W4 ou W5:');
+  if (!week) return null;
+  const clean = week.trim().toUpperCase();
+  if (!['W1','W2','W3','W4','W5'].includes(clean)) {
+    showToast('❌ Semana inválida — usa W1 a W5');
+    return null;
+  }
+  return clean;
+}
+
+function processRows(rows, weekName) {
 
   const campaigns = [];
   let imported = 0, skipped = 0;
@@ -758,6 +768,53 @@ function selectWeek(w) {
   saveState();
 }
 
+// ── FILTER BAR ────────────────────────────────────────────────
+function renderFilterBar() {
+  const week = state.activeWeek;
+  const campaigns = state.weeks[week]?.campaigns || [];
+  const hasAnalog  = campaigns.some(c => c.subtype === 'analog');
+  const hasDigital = campaigns.some(c => c.subtype !== 'analog');
+  const bar = document.getElementById('filterBar');
+
+  let btns = `
+    <button class="filter-btn active" onclick="setFilter('all', this)">Todas</button>
+    <button class="filter-btn" onclick="setFilter('pending', this)">Por fazer</button>
+    <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
+  `;
+
+  if (hasDigital) btns += `
+    <button class="filter-btn" onclick="setFilter('tv', this)">Ecrãs TV</button>
+    <button class="filter-btn" onclick="setFilter('leds', this)">Led's</button>
+    <button class="filter-btn" onclick="setFilter('4x3', this)">Led 4x3</button>
+    <button class="filter-btn" onclick="setFilter('flagship', this)">Flagship</button>
+    <button class="filter-btn" onclick="setFilter('tomi', this)">Tomi</button>
+    <button class="filter-btn" onclick="setFilter('3ecras', this)">3 Ecrãs</button>
+  `;
+
+  if (hasAnalog) btns += `
+    <button class="filter-btn" onclick="setFilter('analog', this)">Analógicos</button>
+    <button class="filter-btn" onclick="setFilter('mupis', this)">Mupis</button>
+    <button class="filter-btn" onclick="setFilter('ppa', this)">PPA</button>
+    <button class="filter-btn" onclick="setFilter('8x3', this)">8x3</button>
+    <button class="filter-btn" onclick="setFilter('paredes', this)">Paredes</button>
+    <button class="filter-btn" onclick="setFilter('atm', this)">ATM</button>
+    <button class="filter-btn" onclick="setFilter('4plus', this)">4Plus</button>
+    <button class="filter-btn" onclick="setFilter('transportes', this)">Transportes</button>
+    <button class="filter-btn" onclick="setFilter('flashes', this)">Flashes</button>
+  `;
+
+  bar.innerHTML = btns;
+
+  // Reactivar filtro atual se ainda existir, senão resetar
+  const activeBtn = bar.querySelector(`[onclick="setFilter('${state.activeFilter}', this)"]`);
+  if (activeBtn) {
+    bar.querySelector('.filter-btn').classList.remove('active');
+    activeBtn.classList.add('active');
+  } else {
+    state.activeFilter = 'all';
+  }
+}
+
 // ── FIELD CARDS ────────────────────────────────────────────────
 function setFilter(f, btn) {
   state.activeFilter = f;
@@ -768,6 +825,7 @@ function setFilter(f, btn) {
 
 function renderCards() {
   if (!state.activeWeek || !state.weeks[state.activeWeek]) return;
+  renderFilterBar();
 
   const campaigns = state.weeks[state.activeWeek].campaigns;
   const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
@@ -789,6 +847,14 @@ function renderCards() {
     if (filter === 'leds' && c.subtype !== 'leds') return false;
     if (filter === 'tomi' && !c.suporte.toLowerCase().includes('tomi')) return false;
     if (filter === 'analog' && c.subtype !== 'analog') return false;
+    if (filter === 'mupis' && !c.suporte.toUpperCase().includes('MUPI')) return false;
+    if (filter === 'ppa' && !c.suporte.toUpperCase().includes('PPA')) return false;
+    if (filter === '8x3' && !c.suporte.toUpperCase().includes('8X3')) return false;
+    if (filter === 'paredes' && !c.suporte.toUpperCase().includes('PARED')) return false;
+    if (filter === 'atm' && !c.suporte.toUpperCase().includes('ATM')) return false;
+    if (filter === '4plus' && !c.suporte.toUpperCase().replace(/\s/g,'').includes('4PLUS') && !c.suporte.includes('(4x1')) return false;
+    if (filter === 'transportes' && !['ELÉT','ELET','RI AUTO','CARRIS','STCP'].some(x => c.suporte.toUpperCase().includes(x))) return false;
+    if (filter === 'flashes' && !c.suporte.toUpperCase().includes('FLASH')) return false;
     if (filter === '3ecras' && !c.suporte.toLowerCase().includes('3 ecr') && !c.suporte.toLowerCase().includes('3ecr')) return false;
 
     return true;
@@ -1096,13 +1162,15 @@ function showToast(msg) {
 // ── ANALOG IMPORT ─────────────────────────────────────────────
 function handleAnalogFile(file) {
   if (!file) return;
+  const week = askWeek();
+  if (!week) return;
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const wb = XLSX.read(e.target.result, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      processAnalogRows(rows, file.name);
+      processAnalogRows(rows, week);
     } catch(err) {
       showToast('❌ Erro ao ler o ficheiro');
     }
@@ -1110,7 +1178,7 @@ function handleAnalogFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-function processAnalogRows(rows, filename) {
+function processAnalogRows(rows, weekName) {
   const campaigns = [];
   let imported = 0, skipped = 0;
 
@@ -1157,9 +1225,16 @@ function processAnalogRows(rows, filename) {
     imported++;
   }
 
-  // Guardar como semana especial "Analógicos"
-  state.weeks['Analógicos'] = { campaigns, loaded: new Date().toLocaleDateString('pt') };
-  state.activeWeek = 'Analógicos';
+  // Juntar com digitais da mesma semana (ou criar semana nova)
+  if (!state.weeks[weekName]) {
+    state.weeks[weekName] = { campaigns: [], loaded: new Date().toLocaleDateString('pt') };
+  }
+  // Remover analógicos anteriores desta semana e adicionar os novos
+  state.weeks[weekName].campaigns = [
+    ...state.weeks[weekName].campaigns.filter(c => c.subtype !== 'analog'),
+    ...campaigns
+  ];
+  state.activeWeek = weekName;
   saveState();
 
   document.getElementById('uploadSuccess').style.display = 'block';
