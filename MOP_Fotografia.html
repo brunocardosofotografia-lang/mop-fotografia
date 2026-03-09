@@ -677,6 +677,10 @@ function processRows(rows, weekName) {
 function renderAll() {
   renderHome();
   renderWeekSelector();
+  // Sync type toggle buttons
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  const activeTypeBtn = document.querySelector(`.type-btn[onclick="setType('${state.activeType}', this)"]`);
+  if (activeTypeBtn) activeTypeBtn.classList.add('active');
   renderCards();
   renderLoadedWeeks();
   renderReport();
@@ -1306,7 +1310,8 @@ function exportProgress() {
     exported: new Date().toISOString(),
     weeks: state.weeks,
     progress: state.progress,
-    activeWeek: state.activeWeek
+    activeWeek: state.activeWeek,
+    activeType: state.activeType
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1332,6 +1337,7 @@ function importProgress(file) {
       if (data.weeks) state.weeks = { ...state.weeks, ...data.weeks };
       if (data.progress) state.progress = { ...state.progress, ...data.progress };
       if (data.activeWeek) state.activeWeek = data.activeWeek;
+      if (data.activeType) state.activeType = data.activeType;
       saveState();
       renderAll();
       showToast('✓ Progresso importado');
