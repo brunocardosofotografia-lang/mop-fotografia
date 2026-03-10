@@ -552,6 +552,9 @@
 <div class="toast" id="toast"></div>
 
 <script>
+var leafletMap = null;
+var mapMarkers = [];
+
 // ── STATE ──────────────────────────────────────────────────────
 let state = {
   weeks: {},      // { 'W1': { campaigns: [], loaded: Date } }
@@ -1413,9 +1416,6 @@ function importProgress(file) {
 }
 
 // ── MAP ────────────────────────────────────────────────────────
-let leafletMap = null;
-let mapMarkers = [];
-
 function handleMapFile(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -1507,8 +1507,9 @@ function initLeafletMap() {
     // Force height so Leaflet can measure it
     mapEl.style.height = '420px';
     leafletMap = L.map('map', { zoomControl: true }).setView([38.736, -9.142], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap © CARTO',
+      subdomains: 'abcd',
       maxZoom: 19
     }).addTo(leafletMap);
     leafletMap.invalidateSize(true);
