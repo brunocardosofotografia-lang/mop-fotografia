@@ -1440,63 +1440,76 @@ function handleMapFile(file) {
 
 function processMapRows(rows) {
   const campanhas = {};
-
-  // Detectar automaticamente as colunas de lat, lng e campanha
-  // procurando nas primeiras linhas valores que pareçam coordenadas
-  let latCol = -1, lngCol = -1, campCol = -1, mupiCol = 1, moradaCol = 2;
   const header = rows[0] || [];
 
-  // Tentar encontrar pelas colunas de cabeçalho
+  // 1. Coluna de campanha — tem '|' nos dados
+  let campCol = -1;
+  for (let r = 1; r < Math.min(10, rows.length); r++) {
+    for (let i = (rows[r] || []).length - 1; i >= 0; i--) {
+      if (String(rows[r][i] || '').includes('|')) { campCol = i; break; }
+    }
+    if (campCol !== -1) break;
+  }
+  if (campCol === -1) { showToast('❌ Coluna de campanhas não encontrada'); return; }
+
+  // 2. Colunas de lat/lng numéricas — pelo header
+  let latCol = -1, lngCol = -1, gpsCol = -1;
   header.forEach((h, i) => {
     const hl = String(h || '').toLowerCase();
     if (hl.includes('lat')) latCol = i;
     if (hl.includes('lon') || hl.includes('lng')) lngCol = i;
+    if (hl.includes('gps') || hl.includes('map')) gpsCol = i;
   });
 
-  // Se não encontrou pelo header, detectar pela primeira linha de dados
+  // Fallback: detectar lat/lng pelos valores numéricos
   if (latCol === -1 || lngCol === -1) {
     const sample = rows[1] || [];
     for (let i = 0; i < sample.length; i++) {
-      const val = parseFloat(String(sample[i] || ''));
-      if (!isNaN(val) && val > 35 && val < 45) latCol = i;       // latitude Portugal
-      if (!isNaN(val) && val < -5 && val > -12) lngCol = i;      // longitude Portugal
+      const v = parseFloat(String(sample[i] || ''));
+      if (!isNaN(v) && v > 35 && v < 45) latCol = i;
+      if (!isNaN(v) && v < -5 && v > -12) lngCol = i;
     }
   }
 
-  // Coluna de campanha = coluna que contém '|' nos dados (nome de campanha)
-  campCol = -1;
-  const sampleRow = rows[1] || [];
-  for (let i = sampleRow.length - 1; i >= 0; i--) {
-    const val = String(sampleRow[i] || '');
-    if (val.includes('|')) { campCol = i; break; }
-  }
-  // Fallback: procurar nas primeiras 10 linhas
-  if (campCol === -1) {
-    for (let r = 1; r < Math.min(10, rows.length); r++) {
-      for (let i = (rows[r] || []).length - 1; i >= 0; i--) {
-        if (String(rows[r][i] || '').includes('|')) { campCol = i; break; }
-      }
-      if (campCol !== -1) break;
+  // Fallback: detectar coluna GPS pelo URL nas células
+  if (gpsCol === -1) {
+    const sample = rows[1] || [];
+    for (let i = 0; i < sample.length; i++) {
+      if (String(sample[i] || '').includes('maps')) { gpsCol = i; break; }
     }
   }
-  if (campCol === -1) campCol = rows[1] ? rows[1].length - 1 : 9;
 
-  if (latCol === -1 || lngCol === -1) {
-    showToast('❌ Não foi possível encontrar as coordenadas no ficheiro');
+  if (latCol === -1 && lngCol === -1 && gpsCol === -1) {
+    showToast('❌ Não foi possível encontrar coordenadas no ficheiro');
     return;
   }
+
+  const mupiCol = 1, moradaCol = 2;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const mupi   = String(row[mupiCol] || '').trim();
     const morada = String(row[moradaCol] || '').trim();
-    const lat    = parseFloat(String(row[latCol] || '').trim());
-    const lng    = parseFloat(String(row[lngCol] || '').trim());
     const camp   = String(row[campCol] || '').trim();
+    if (!mupi || !camp) continue;
 
-    if (!mupi || isNaN(lat) || isNaN(lng) || !camp) continue;
+    let lat = NaN, lng = NaN;
 
-    // Pode ter múltiplas campanhas separadas por |
+    // Caso 1: colunas numéricas de lat/lng
+    if (latCol !== -1 && lngCol !== -1) {
+      lat = parseFloat(String(row[latCol] || ''));
+      lng = parseFloat(String(row[lngCol] || ''));
+    }
+
+    // Caso 2: extrair do URL Google Maps (ex: /place/38.703+-9.194)
+    if ((isNaN(lat) || isNaN(lng)) && gpsCol !== -1) {
+      const url = String(row[gpsCol] || '');
+      const m = url.match(/place\/(-?\d+\.?\d*)\+(-?\d+\.?\d*)/);
+      if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+    }
+
+    if (isNaN(lat) || isNaN(lng)) continue;
+
     camp.split('|').forEach(c => {
       c = c.trim();
       if (!c) return;
@@ -1505,12 +1518,18 @@ function processMapRows(rows) {
     });
   }
 
+  if (Object.keys(campanhas).length === 0) {
+    showToast('❌ Nenhuma campanha encontrada no ficheiro');
+    return;
+  }
+
   state.mapData = campanhas;
   saveState();
   switchTab('map');
   showToast(`✓ ${Object.keys(campanhas).length} campanhas carregadas no mapa`);
   try { document.getElementById('mapFileInput').value = ''; } catch(e) {}
 }
+
 
 function initLeafletMap() {
   setTimeout(() => {
