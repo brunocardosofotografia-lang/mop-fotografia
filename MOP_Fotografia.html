@@ -1436,18 +1436,48 @@ function handleMapFile(file) {
 function processMapRows(rows) {
   const campanhas = {};
 
+  // Detectar automaticamente as colunas de lat, lng e campanha
+  // procurando nas primeiras linhas valores que pareçam coordenadas
+  let latCol = -1, lngCol = -1, campCol = -1, mupiCol = 1, moradaCol = 2;
+  const header = rows[0] || [];
+
+  // Tentar encontrar pelas colunas de cabeçalho
+  header.forEach((h, i) => {
+    const hl = String(h || '').toLowerCase();
+    if (hl.includes('lat')) latCol = i;
+    if (hl.includes('lon') || hl.includes('lng')) lngCol = i;
+  });
+
+  // Se não encontrou pelo header, detectar pela primeira linha de dados
+  if (latCol === -1 || lngCol === -1) {
+    const sample = rows[1] || [];
+    for (let i = 0; i < sample.length; i++) {
+      const val = parseFloat(String(sample[i] || ''));
+      if (!isNaN(val) && val > 35 && val < 45) latCol = i;       // latitude Portugal
+      if (!isNaN(val) && val < -5 && val > -12) lngCol = i;      // longitude Portugal
+    }
+  }
+
+  // Coluna de campanha = última coluna com dados
+  campCol = rows[1] ? rows[1].length - 1 : 9;
+
+  if (latCol === -1 || lngCol === -1) {
+    showToast('❌ Não foi possível encontrar as coordenadas no ficheiro');
+    return;
+  }
+
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const mupi  = String(row[1] || '').trim();
-    const morada = String(row[2] || '').trim();
-    const lat   = parseFloat(String(row[6] || '').trim());
-    const lng   = parseFloat(String(row[7] || '').trim());
-    const campCol = String(row[9] || '').trim();
+    const mupi   = String(row[mupiCol] || '').trim();
+    const morada = String(row[moradaCol] || '').trim();
+    const lat    = parseFloat(String(row[latCol] || '').trim());
+    const lng    = parseFloat(String(row[lngCol] || '').trim());
+    const camp   = String(row[campCol] || '').trim();
 
-    if (!mupi || isNaN(lat) || isNaN(lng) || !campCol) continue;
+    if (!mupi || isNaN(lat) || isNaN(lng) || !camp) continue;
 
-    // Col J pode ter múltiplas campanhas separadas por |
-    campCol.split('|').forEach(c => {
+    // Pode ter múltiplas campanhas separadas por |
+    camp.split('|').forEach(c => {
       c = c.trim();
       if (!c) return;
       if (!campanhas[c]) campanhas[c] = [];
