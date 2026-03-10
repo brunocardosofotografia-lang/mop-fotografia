@@ -1495,24 +1495,27 @@ function processMapRows(rows) {
 }
 
 function initLeafletMap() {
-  // Must run after mapContent is visible
   setTimeout(() => {
+    // Destroy existing map instance to avoid "already initialized" error
+    if (leafletMap) {
+      leafletMap.remove();
+      leafletMap = null;
+      mapMarkers = [];
+    }
     const mapEl = document.getElementById('map');
     if (!mapEl) return;
-    // Make sure mapContent is visible before init
-    document.getElementById('mapContent').style.display = 'block';
-    if (!leafletMap) {
-      leafletMap = L.map('map', { zoomControl: true }).setView([38.736, -9.142], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-      }).addTo(leafletMap);
-    }
+    // Force height so Leaflet can measure it
+    mapEl.style.height = '420px';
+    leafletMap = L.map('map', { zoomControl: true }).setView([38.736, -9.142], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(leafletMap);
     leafletMap.invalidateSize(true);
     // Show selected campaign if any
     const sel = document.getElementById('campaignSelect');
     if (sel && sel.value) showMapCampaign(sel.value);
-  }, 200);
+  }, 300);
 }
 
 function renderMapView() {
