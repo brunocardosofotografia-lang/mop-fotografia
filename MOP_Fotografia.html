@@ -687,8 +687,8 @@ function processRows(rows, weekName) {
       else if (semRua)  { m = 2; ip = 2; }
       else              { r = 2; m = 2; ip = 2; }
     } else if (fmtUp.includes('3') && (fmtUp.includes('ECRÃ') || fmtUp.includes('ECRA'))) {
-      // Digital – 3 ecrãs — igual ao TV
-      r = 2; m = 2; ip = 2;
+      // Digital – 3 ecrãs — só Metro
+      r = 0; m = 3; ip = 0;
     } else if (fmtUp.includes('TOMI') || colG.toLowerCase() === 'tomi') {
       // Tomi — sempre 1 foto metro
       m = 1;
