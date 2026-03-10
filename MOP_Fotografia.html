@@ -556,7 +556,7 @@ var leafletMap = null;
 var mapMarkers = [];
 
 // ── STATE ──────────────────────────────────────────────────────
-let state = {
+var state = {
   weeks: {},      // { 'W1': { campaigns: [], loaded: Date } }
   progress: {},   // { 'campaignId': { r: 0, m: 0, ip: 0, done: false } }
   activeWeek: null,
@@ -585,14 +585,17 @@ function campaignId(c) {
 }
 
 // ── FILE IMPORT ────────────────────────────────────────────────
-const dropZone = document.getElementById('dropZone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) handleFile(file);
-});
+function initDropZone() {
+  const dropZone = document.getElementById('dropZone');
+  if (!dropZone) return;
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+}
 
 function handleFile(file) {
   if (!file) return;
@@ -1594,6 +1597,7 @@ function clearMapMarkers() {
 // ── INIT ───────────────────────────────────────────────────────
 loadState();
 renderAll();
+initDropZone();
 </script>
 </body>
 </html>
