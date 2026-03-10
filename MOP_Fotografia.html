@@ -1463,8 +1463,23 @@ function processMapRows(rows) {
     }
   }
 
-  // Coluna de campanha = última coluna com dados
-  campCol = rows[1] ? rows[1].length - 1 : 9;
+  // Coluna de campanha = coluna que contém '|' nos dados (nome de campanha)
+  campCol = -1;
+  const sampleRow = rows[1] || [];
+  for (let i = sampleRow.length - 1; i >= 0; i--) {
+    const val = String(sampleRow[i] || '');
+    if (val.includes('|')) { campCol = i; break; }
+  }
+  // Fallback: procurar nas primeiras 10 linhas
+  if (campCol === -1) {
+    for (let r = 1; r < Math.min(10, rows.length); r++) {
+      for (let i = (rows[r] || []).length - 1; i >= 0; i--) {
+        if (String(rows[r][i] || '').includes('|')) { campCol = i; break; }
+      }
+      if (campCol !== -1) break;
+    }
+  }
+  if (campCol === -1) campCol = rows[1] ? rows[1].length - 1 : 9;
 
   if (latCol === -1 || lngCol === -1) {
     showToast('❌ Não foi possível encontrar as coordenadas no ficheiro');
