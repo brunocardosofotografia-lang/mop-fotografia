@@ -895,6 +895,15 @@ function renderFilterBar() {
   }
 }
 
+// ── SUPORTE LABEL ─────────────────────────────────────────────
+function suporteLabel(c) {
+  if (c.subtype === '4x3') return 'Led 4x3';
+  if (c.subtype === 'flagship') return 'Flagship';
+  if (c.subtype === 'leds') return "Led's";
+  if (c.subtype === 'analog') return c.suporte;
+  return c.suporte;
+}
+
 // ── FIELD CARDS ────────────────────────────────────────────────
 function syncTypeToggle() {
   const btns = document.querySelectorAll('.type-btn');
@@ -1006,7 +1015,7 @@ function renderCards() {
             <div class="card-name">${c.campanha || '—'}</div>
             <div class="card-meta">
               <span class="tag">${c.venda}</span>
-              <span class="tag">${c.suporte}</span>
+              <span class="tag">${suporteLabel(c)}</span>
               ${tags.join('')}
             </div>
           </div>
