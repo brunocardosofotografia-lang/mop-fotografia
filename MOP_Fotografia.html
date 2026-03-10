@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>MOP · Fotografia</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -352,6 +354,21 @@
   }
   .week-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .week-btn.has-data { color: var(--text2); }
+
+  #map { z-index: 1; }
+  .leaflet-popup-content-wrapper {
+    border-radius: 10px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+    font-family: -apple-system, sans-serif !important;
+  }
+  .leaflet-popup-content { font-size: 13px; line-height: 1.5; margin: 10px 14px; }
+  .map-import-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 14px; border-radius:var(--radius-sm);
+    background:var(--accent-light); color:var(--accent);
+    border:1px solid #c0d8f5; font-size:13px; font-weight:600;
+    cursor:pointer; margin-bottom:12px;
+  }
 </style>
 </head>
 <body>
@@ -370,7 +387,35 @@
   <button onclick="switchTab('field')">Em Campo</button>
   <button onclick="switchTab('import')">Importar</button>
   <button onclick="switchTab('report')">Report</button>
+  <button onclick="switchTab('map')">Mapa</button>
 </nav>
+
+<!-- MAP -->
+<div class="view" id="view-map">
+  <div id="mapEmpty" class="empty">
+    <div class="empty-icon">🗺️</div>
+    <div class="empty-text">Importa o ficheiro de distribuição de Mupis para ver o mapa</div>
+  </div>
+  <div id="mapContent" style="display:none">
+    <div style="margin-bottom:12px;">
+      <select id="campaignSelect" onchange="filterMap()"
+        style="width:100%; padding:10px 14px; background:var(--surface);
+               border:1px solid var(--border); border-radius:var(--radius-sm);
+               color:var(--text); font-size:14px; font-family:-apple-system,sans-serif;
+               outline:none; box-shadow:var(--shadow);">
+        <option value="">Seleciona uma campanha...</option>
+      </select>
+    </div>
+    <div style="background:var(--surface); border-radius:var(--radius);
+                box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px;">
+      <div id="map" style="height:420px; width:100%;"></div>
+    </div>
+    <div id="mapStats" style="background:var(--surface); border-radius:var(--radius);
+         padding:13px 16px; box-shadow:var(--shadow); font-size:13px; color:var(--muted);">
+      Seleciona uma campanha para ver os Mupis no mapa
+    </div>
+  </div>
+</div>
 
 <!-- HOME -->
 <div class="view active" id="view-home">
@@ -426,7 +471,7 @@
 
 <!-- IMPORT -->
 <div class="view" id="view-import">
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px;">
     <div class="drop-zone" style="margin-bottom:0" onclick="document.getElementById('fileInput').click()">
       <div class="drop-icon">📱</div>
       <div class="drop-title">Digitais</div>
@@ -437,9 +482,15 @@
       <div class="drop-title">Analógicos</div>
       <div class="drop-sub">Smartsheet da MOP</div>
     </div>
+    <div class="drop-zone" style="margin-bottom:0" onclick="document.getElementById('mapFileInput').click()">
+      <div class="drop-icon">📍</div>
+      <div class="drop-title">Mupis</div>
+      <div class="drop-sub">Distribuição semanal</div>
+    </div>
   </div>
   <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
   <input type="file" id="analogFileInput" accept=".xlsx,.xls" onchange="handleAnalogFile(this.files[0])" style="display:none">
+<input type="file" id="mapFileInput" accept=".xlsx,.xls" onchange="handleMapFile(this.files[0])" style="display:none">
 <input type="file" id="progressInput" accept=".json" onchange="importProgress(this.files[0])" style="display:none">
 
   <div class="upload-success" id="uploadSuccess"></div>
@@ -508,6 +559,7 @@ let state = {
   activeWeek: null,
   activeFilter: 'all',
   activeType: 'digital',
+  mapData: {},
   currentTab: 'home'
 };
 
@@ -1191,10 +1243,15 @@ function switchTab(tab) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById(`view-${tab}`).classList.add('active');
-  document.querySelectorAll('nav button')[['home','field','import','report'].indexOf(tab)].classList.add('active');
+  document.querySelectorAll('nav button')[['home','field','import','report','map'].indexOf(tab)].classList.add('active');
   state.currentTab = tab;
   if (tab === 'field') renderCards();
   if (tab === 'report') renderReport();
+  if (tab === 'map') {
+    renderMapView();
+    // Leaflet needs resize event when tab becomes visible
+    setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 100);
+  }
 }
 
 // ── TOAST ──────────────────────────────────────────────────────
@@ -1315,7 +1372,8 @@ function exportProgress() {
     weeks: state.weeks,
     progress: state.progress,
     activeWeek: state.activeWeek,
-    activeType: state.activeType
+    activeType: state.activeType,
+    mapData: state.mapData || {}
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1342,6 +1400,7 @@ function importProgress(file) {
       if (data.progress) state.progress = { ...state.progress, ...data.progress };
       if (data.activeWeek) state.activeWeek = data.activeWeek;
       if (data.activeType) state.activeType = data.activeType;
+      if (data.mapData) state.mapData = data.mapData;
       saveState();
       renderAll();
       showToast('✓ Progresso importado');
@@ -1352,6 +1411,137 @@ function importProgress(file) {
     }
   };
   reader.readAsText(file);
+}
+
+// ── MAP ────────────────────────────────────────────────────────
+let leafletMap = null;
+let mapMarkers = [];
+
+function handleMapFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      processMapRows(rows);
+    } catch(err) {
+      showToast('❌ Erro ao ler o ficheiro');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function processMapRows(rows) {
+  const campanhas = {};
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const mupi  = String(row[1] || '').trim();
+    const morada = String(row[2] || '').trim();
+    const lat   = parseFloat(String(row[6] || '').trim());
+    const lng   = parseFloat(String(row[7] || '').trim());
+    const campCol = String(row[9] || '').trim();
+
+    if (!mupi || isNaN(lat) || isNaN(lng) || !campCol) continue;
+
+    // Col J pode ter múltiplas campanhas separadas por |
+    campCol.split('|').forEach(c => {
+      c = c.trim();
+      if (!c) return;
+      if (!campanhas[c]) campanhas[c] = [];
+      campanhas[c].push({ mupi, morada, lat, lng });
+    });
+  }
+
+  state.mapData = campanhas;
+  saveState();
+  renderMapView();
+  showToast(`✓ ${Object.keys(campanhas).length} campanhas carregadas no mapa`);
+  document.getElementById('mapFileInput').value = '';
+}
+
+function renderMapView() {
+  const campanhas = state.mapData || {};
+  const names = Object.keys(campanhas).sort();
+  const hasData = names.length > 0;
+
+  document.getElementById('mapEmpty').style.display = hasData ? 'none' : 'block';
+  document.getElementById('mapContent').style.display = hasData ? 'block' : 'none';
+
+  if (!hasData) return;
+
+  // Populate select
+  const sel = document.getElementById('campaignSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Seleciona uma campanha...</option>' +
+    names.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n} (${campanhas[n].length} mupis)</option>`).join('');
+
+  // Init map if needed
+  if (!leafletMap) {
+    leafletMap = L.map('map').setView([38.736, -9.142], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 19
+    }).addTo(leafletMap);
+  }
+
+  // Show selected campaign
+  if (current && campanhas[current]) {
+    showMapCampaign(current);
+  }
+}
+
+function filterMap() {
+  const sel = document.getElementById('campaignSelect');
+  const name = sel.value;
+  if (!name) {
+    clearMapMarkers();
+    document.getElementById('mapStats').textContent = 'Seleciona uma campanha para ver os Mupis no mapa';
+    return;
+  }
+  showMapCampaign(name);
+}
+
+function showMapCampaign(name) {
+  const campanhas = state.mapData || {};
+  const mupis = campanhas[name] || [];
+  clearMapMarkers();
+
+  if (!leafletMap) return;
+
+  const bounds = [];
+
+  mupis.forEach(m => {
+    const marker = L.circleMarker([m.lat, m.lng], {
+      radius: 7,
+      fillColor: '#0071e3',
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.85
+    }).addTo(leafletMap);
+
+    marker.bindPopup(`
+      <strong>${m.mupi}</strong><br>
+      <span style="color:#86868b">${m.morada}</span>
+    `);
+    mapMarkers.push(marker);
+    bounds.push([m.lat, m.lng]);
+  });
+
+  if (bounds.length > 0) {
+    leafletMap.fitBounds(bounds, { padding: [30, 30] });
+  }
+
+  document.getElementById('mapStats').innerHTML =
+    `<strong style="color:var(--text)">${name}</strong> — <span style="color:var(--accent); font-weight:600">${mupis.length} Mupis</span>`;
+}
+
+function clearMapMarkers() {
+  mapMarkers.forEach(m => m.remove());
+  mapMarkers = [];
 }
 
 // ── INIT ───────────────────────────────────────────────────────
