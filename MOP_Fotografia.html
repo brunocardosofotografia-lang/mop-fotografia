@@ -804,7 +804,7 @@ function renderHome() {
   weeks.forEach(w => {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
       const done = p.done === true ||
                    (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
       totalCampaigns++;
@@ -844,7 +844,7 @@ function renderHome() {
     let wDone = 0, wTotal = 0, wPhotos = 0;
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
       const done = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
       wTotal++;
       if (done) wDone++;
@@ -1001,7 +1001,7 @@ function renderCards() {
     if (!_isAnalog && c.subtype === 'analog') return false;
 
     const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
     const done = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
 
     if (search && !c.campanha.toLowerCase().includes(search) &&
@@ -1039,7 +1039,7 @@ function renderCards() {
   const total = campaigns.length;
   const done = campaigns.filter(c => {
     const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
     return p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
   }).length;
 
@@ -1055,7 +1055,7 @@ function renderCards() {
 
   list.innerHTML = filtered.map(c => {
     const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
     const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
 
     const tags = [];
@@ -1163,7 +1163,7 @@ function updateProgress() {
   const total = campaigns.length;
   const done = campaigns.filter(c => {
     const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
     return p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
   }).length;
   document.getElementById('progressFill').style.width = total ? `${(done/total)*100}%` : '0%';
@@ -1188,7 +1188,7 @@ function renderReport() {
   weeks.forEach(w => {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
       const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
       if (photos > 0 || isDone) {
@@ -1224,7 +1224,7 @@ function exportReport() {
   weeks.forEach(w => {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
       const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
       if (photos > 0 || isDone) {
@@ -1254,7 +1254,7 @@ function copyReport() {
   Object.values(state.weeks).forEach(w => {
     w.campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
       const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
       if (photos > 0 || isDone) {
