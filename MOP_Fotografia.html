@@ -1056,7 +1056,7 @@ function renderCards() {
   list.innerHTML = filtered.map(c => {
     const id = campaignId(c);
     const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-    const isDone = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+    const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
 
     const tags = [];
     if (c.r > 0) tags.push(`<span class="tag rua">RUA ×${c.r}</span>`);
