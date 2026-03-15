@@ -730,8 +730,20 @@ function processRows(rows, weekName) {
     const notas = (colK && !colK.toUpperCase().includes('CONTINUA') &&
                    !colK.toUpperCase().includes('BRANDSTORE')) ? colK : '';
 
-    campaigns.push({ venda: colA, campanha: colI, suporte: colG, subtype, notas, r, m, ip });
-    imported++;
+    // Agrupar por Nº de Venda — se já existe, adiciona localização às notas
+    const existingCamp = campaigns.find(c => c.venda === colA);
+    if (existingCamp) {
+      // Adicionar localização às notas
+      if (notas && !existingCamp.notas.includes(notas)) {
+        existingCamp.notas = existingCamp.notas
+          ? existingCamp.notas + ' · ' + notas
+          : notas;
+      }
+      // Não incrementa imported — é a mesma campanha
+    } else {
+      campaigns.push({ venda: colA, campanha: colI, suporte: colG, subtype, notas, r, m, ip });
+      imported++;
+    }
   }
 
   // Preservar progresso existente — só atualiza campanhas, mantém progresso registado
