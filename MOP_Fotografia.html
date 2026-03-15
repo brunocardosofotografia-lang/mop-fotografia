@@ -805,8 +805,8 @@ function renderHome() {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-      const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip &&
-                   (c.r + c.m + c.ip > 0);
+      const done = p.done === true ||
+                   (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
       totalCampaigns++;
       if (done) totalDone++;
       totalPhotos += (p.r || 0) + (p.m || 0) + (p.ip || 0);
@@ -845,7 +845,7 @@ function renderHome() {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-      const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+      const done = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
       wTotal++;
       if (done) wDone++;
       wPhotos += (p.r || 0) + (p.m || 0) + (p.ip || 0);
@@ -1002,7 +1002,7 @@ function renderCards() {
 
     const id = campaignId(c);
     const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-    const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+    const done = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
 
     if (search && !c.campanha.toLowerCase().includes(search) &&
         !c.venda.toLowerCase().includes(search)) return false;
@@ -1071,7 +1071,7 @@ function renderCards() {
     return `
       <div class="card ${isDone ? 'done' : ''}" id="card_${id}">
         <div class="card-header" onclick="toggleCard('${id}', ${c.r}, ${c.m}, ${c.ip})">
-          <div class="card-check" onclick="toggleDone(event,'${id}',${c.r},${c.m},${c.ip})">
+          <div class="card-check" onclick="toggleDone(event,'${id}')">
             <span class="card-check-icon">✓</span>
           </div>
           <div class="card-info">
@@ -1127,24 +1127,11 @@ function changeCount(e, id, type, delta) {
   saveState();
 }
 
-function toggleDone(e, id, r, m, ip) {
+function toggleDone(e, id) {
   e.stopPropagation();
-  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0 };
-  const p = state.progress[id];
-  const isDone = p.r >= r && p.m >= m && p.ip >= ip && (r + m + ip > 0);
-
-  if (isDone) {
-    // Desmarcar — repõe a zero
-    state.progress[id] = { r: 0, m: 0, ip: 0 };
-  } else {
-    // Marcar como concluída — apenas conta o que foi realmente registado
-    // Se o contador estiver a 0, mantém 0 (não preenche automaticamente)
-    state.progress[id] = {
-      r: p.r > 0 ? p.r : r,
-      m: p.m > 0 ? p.m : m,
-      ip: p.ip > 0 ? p.ip : ip
-    };
-  }
+  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0, done: false };
+  // Apenas alterna o flag "done" — não toca nos contadores
+  state.progress[id].done = !state.progress[id].done;
   saveState();
   renderCards();
   renderHome();
@@ -1205,7 +1192,8 @@ function renderReport() {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
-      if (photos > 0) {
+      const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+      if (photos > 0 || isDone) {
         if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
         byVenda[c.venda].photos += photos;
       }
@@ -1240,7 +1228,8 @@ function exportReport() {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
-      if (photos > 0) {
+      const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+      if (photos > 0 || isDone) {
         if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
         byVenda[c.venda].photos += photos;
       }
@@ -1268,7 +1257,8 @@ function copyReport() {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
-      if (photos > 0) {
+      const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+      if (photos > 0 || isDone) {
         if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
         byVenda[c.venda].photos += photos;
       }
