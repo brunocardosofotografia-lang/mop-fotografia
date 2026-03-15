@@ -472,9 +472,16 @@
   </div>
   <div id="fieldContent" style="display:none">
     <div class="week-selector" id="weekSelector"></div>
-    <div class="type-toggle" id="typeToggle">
-      <button class="type-btn active" data-type="digital" onclick="setType('digital', this)">Digitais</button>
-      <button class="type-btn" data-type="analog" onclick="setType('analog', this)">Analógicos</button>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <div class="type-toggle" id="typeToggle" style="margin-bottom:0; flex:1;">
+        <button class="type-btn active" data-type="digital" onclick="setType('digital', this)">Digitais</button>
+        <button class="type-btn" data-type="analog" onclick="setType('analog', this)">Analógicos</button>
+      </div>
+      <button onclick="openNewCampaign()" style="
+        background:var(--accent); color:#fff; border:none;
+        border-radius:var(--radius-sm); padding:8px 12px;
+        font-size:14px; font-weight:700; cursor:pointer;
+        flex-shrink:0; box-shadow:var(--shadow);">+ Nova</button>
     </div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
@@ -1734,6 +1741,109 @@ function clearMapMarkers() {
   mapMarkers = [];
 }
 
+// ── NOVA CAMPANHA ─────────────────────────────────────────────
+const NC_FORMATOS = {
+  digital: [
+    { label: 'Ecrãs TV',   subtype: '',         r:2, m:2, ip:2 },
+    { label: 'Ecrãs TV — Só Rua',  subtype: '', r:2, m:0, ip:0 },
+    { label: 'Ecrãs TV — Só Metro',subtype: '', r:0, m:2, ip:0 },
+    { label: 'Ecrãs TV — Sem Rua', subtype: '', r:0, m:2, ip:2 },
+    { label: '3 Ecrãs',    subtype: '',         r:0, m:3, ip:0 },
+    { label: "Led's",      subtype: 'leds',     r:0, m:4, ip:2 },
+    { label: 'Led 4x3',    subtype: '4x3',      r:3, m:0, ip:0 },
+    { label: 'Flagship',   subtype: 'flagship', r:2, m:0, ip:0 },
+    { label: 'Tomi',       subtype: '',         r:0, m:1, ip:0 },
+  ],
+  analog: [
+    { label: 'Mupis',      subtype: 'analog', r:2, m:2, ip:2 },
+    { label: 'PPA',        subtype: 'analog', r:5, m:0, ip:0 },
+    { label: '8x3',        subtype: 'analog', r:3, m:0, ip:0 },
+    { label: 'Paredes Metro', subtype: 'analog', r:0, m:1, ip:0 },
+    { label: 'ATM',        subtype: 'analog', r:2, m:0, ip:0 },
+    { label: '4Plus',      subtype: 'analog', r:0, m:3, ip:0 },
+    { label: 'Transportes',subtype: 'analog', r:4, m:0, ip:0 },
+    { label: 'Flashes',    subtype: 'analog', r:0, m:3, ip:0 },
+    { label: 'Outro',      subtype: 'analog', r:0, m:1, ip:0 },
+  ]
+};
+
+function openNewCampaign() {
+  if (!state.activeWeek) { showToast('Seleciona uma semana primeiro'); return; }
+  const modal = document.getElementById('newCampaignModal');
+  modal.style.display = 'flex';
+  // Reset fields
+  document.getElementById('nc_venda').value = '';
+  document.getElementById('nc_nome').value = '';
+  document.getElementById('nc_notas').value = '';
+  document.getElementById('nc_tipo').value = state.activeType === 'analog' ? 'analog' : 'digital';
+  updateNcFormato();
+}
+
+function closeNewCampaign() {
+  document.getElementById('newCampaignModal').style.display = 'none';
+}
+
+function updateNcFormato() {
+  const tipo = document.getElementById('nc_tipo').value;
+  const sel = document.getElementById('nc_formato');
+  sel.innerHTML = NC_FORMATOS[tipo].map((f, i) =>
+    `<option value="${i}">${f.label}</option>`
+  ).join('');
+  updateNcFotos();
+}
+
+function updateNcFotos() {
+  const tipo = document.getElementById('nc_tipo').value;
+  const idx = parseInt(document.getElementById('nc_formato').value);
+  const f = NC_FORMATOS[tipo][idx];
+  if (!f) return;
+  document.getElementById('nc_r').value = f.r;
+  document.getElementById('nc_m').value = f.m;
+  document.getElementById('nc_ip').value = f.ip;
+}
+
+function saveNewCampaign() {
+  const venda = document.getElementById('nc_venda').value.trim();
+  const nome  = document.getElementById('nc_nome').value.trim();
+  const tipo  = document.getElementById('nc_tipo').value;
+  const fmtIdx = parseInt(document.getElementById('nc_formato').value);
+  const fmt   = NC_FORMATOS[tipo][fmtIdx];
+  const r     = parseInt(document.getElementById('nc_r').value) || 0;
+  const m     = parseInt(document.getElementById('nc_m').value) || 0;
+  const ip    = parseInt(document.getElementById('nc_ip').value) || 0;
+  const notas = document.getElementById('nc_notas').value.trim();
+
+  if (!venda) { showToast('❌ Preenche o Nº Venda'); return; }
+  if (!nome)  { showToast('❌ Preenche o nome da campanha'); return; }
+
+  const campaign = {
+    venda, campanha: nome,
+    suporte: fmt.label,
+    subtype: fmt.subtype,
+    notas, r, m, ip,
+    manual: true  // flag para identificar campanhas manuais
+  };
+
+  if (!state.weeks[state.activeWeek]) {
+    state.weeks[state.activeWeek] = { campaigns: [], loaded: new Date().toLocaleDateString('pt') };
+  }
+  state.weeks[state.activeWeek].campaigns.push(campaign);
+  saveState();
+  closeNewCampaign();
+  // Mudar para o tipo correto para ver a nova campanha
+  const typeBtn = document.querySelector(`.type-btn[data-type="${tipo}"]`);
+  if (typeBtn) setType(tipo, typeBtn);
+  renderCards();
+  renderHome();
+  showToast(`✓ Campanha "${nome}" adicionada`);
+}
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', e => {
+  const modal = document.getElementById('newCampaignModal');
+  if (modal && e.target === modal) closeNewCampaign();
+});
+
 // ── INIT ───────────────────────────────────────────────────────
 loadState();
 renderAll();
@@ -1743,6 +1853,93 @@ window.addEventListener('scroll', () => {
   if (btn) btn.classList.toggle('visible', window.scrollY > 200);
 });
 </script>
+  <!-- MODAL NOVA CAMPANHA -->
+  <div id="newCampaignModal" style="
+    display:none; position:fixed; inset:0; z-index:2000;
+    background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);
+    align-items:flex-end; justify-content:center;">
+    <div style="
+      background:var(--surface); border-radius:20px 20px 0 0;
+      padding:20px 20px 40px; width:100%; max-width:680px;
+      box-shadow:0 -4px 24px rgba(0,0,0,0.15);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <div style="font-size:17px; font-weight:700;">Nova Campanha</div>
+        <button onclick="closeNewCampaign()" style="background:var(--surface2); border:none; border-radius:50%; width:28px; height:28px; font-size:16px; cursor:pointer; color:var(--muted);">✕</button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">Nº VENDA</label>
+          <input id="nc_venda" type="text" placeholder="ex: V.1234/26"
+            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
+            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
+            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">NOME DA CAMPANHA</label>
+          <input id="nc_nome" type="text" placeholder="ex: Nike_Primavera"
+            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
+            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
+            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">TIPO</label>
+          <select id="nc_tipo" onchange="updateNcFormato()"
+            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
+            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
+            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
+            <option value="digital">Digital</option>
+            <option value="analog">Analógico</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">FORMATO</label>
+          <select id="nc_formato" onchange="updateNcFotos()"
+            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
+            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
+            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+          <div>
+            <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">RUA</label>
+            <input id="nc_r" type="number" min="0" max="9" value="0"
+              style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
+              border-radius:var(--radius-sm); font-size:15px; text-align:center;
+              background:var(--surface); color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">METRO</label>
+            <input id="nc_m" type="number" min="0" max="9" value="0"
+              style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
+              border-radius:var(--radius-sm); font-size:15px; text-align:center;
+              background:var(--surface); color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">IP</label>
+            <input id="nc_ip" type="number" min="0" max="9" value="0"
+              style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
+              border-radius:var(--radius-sm); font-size:15px; text-align:center;
+              background:var(--surface); color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">NOTAS (opcional)</label>
+          <input id="nc_notas" type="text" placeholder="ex: Só Rua"
+            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
+            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
+            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
+        </div>
+        <button onclick="saveNewCampaign()" style="
+          background:var(--accent); color:#fff; border:none;
+          border-radius:var(--radius-sm); padding:14px;
+          font-size:15px; font-weight:700; cursor:pointer; margin-top:4px;">
+          Adicionar Campanha
+        </button>
+      </div>
+    </div>
+  </div>
+
   <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 </body>
 </html>
