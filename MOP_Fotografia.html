@@ -746,16 +746,15 @@ function processRows(rows, weekName) {
     }
   }
 
-  // Preservar progresso existente — só atualiza campanhas, mantém progresso registado
+  // Preservar campanhas manuais e analógicas ao reimportar
   const existing = state.weeks[weekName];
-  state.weeks[weekName] = { campaigns, loaded: new Date().toLocaleDateString('pt') };
-  // Manter progresso das campanhas que já existiam (pelo id)
   if (existing) {
-    campaigns.forEach(c => {
-      const id = `${c.venda}_${c.suporte}`.replace(/[^a-zA-Z0-9_]/g, '_');
-      // Progresso já guardado em state.progress — não precisa de fazer nada extra
-    });
+    const manuais = existing.campaigns.filter(c => c.manual === true);
+    const analogicas = existing.campaigns.filter(c => c.subtype === 'analog');
+    // Juntar campanhas importadas com manuais e analógicas existentes
+    campaigns.push(...manuais, ...analogicas);
   }
+  state.weeks[weekName] = { campaigns, loaded: new Date().toLocaleDateString('pt') };
   state.activeWeek = weekName;
   saveState();
 
