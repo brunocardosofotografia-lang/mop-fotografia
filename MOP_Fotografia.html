@@ -1055,7 +1055,7 @@ function renderCards() {
   const done = campaigns.filter(c => {
     const id = campaignId(c);
     const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-    return p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+    return p.done === true;
   }).length;
 
   document.getElementById('progressFill').style.width = total ? `${(done/total)*100}%` : '0%';
