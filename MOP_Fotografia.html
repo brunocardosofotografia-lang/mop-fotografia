@@ -1206,7 +1206,7 @@ function renderReport() {
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
       const isDone = p.done === true;
       if (photos > 0 || isDone) {
-        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
+        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, suporte: suporteLabel(c), photos: 0 };
         byVenda[c.venda].photos += photos;
       }
     });
@@ -1242,21 +1242,21 @@ function exportReport() {
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
       const isDone = p.done === true;
       if (photos > 0 || isDone) {
-        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
+        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, suporte: suporteLabel(c), photos: 0 };
         byVenda[c.venda].photos += photos;
       }
     });
   });
 
   // Gerar XLSX com SheetJS — sem problemas de encoding ou separadores
-  const rows = [['Nº Venda', 'Campanha', 'Nº Fotos']];
+  const rows = [['Nº Venda', 'Campanha', 'Suporte', 'Nº Fotos']];
   Object.entries(byVenda).sort().forEach(([v, d]) => {
-    rows.push([v, d.campanha, d.photos]);
+    rows.push([v, d.campanha, d.suporte, d.photos]);
   });
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
   // Largura das colunas
-  ws['!cols'] = [{ wch: 14 }, { wch: 50 }, { wch: 10 }];
+  ws['!cols'] = [{ wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 10 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report MOP');
   XLSX.writeFile(wb, 'report_mop.xlsx');
@@ -1272,7 +1272,7 @@ function copyReport() {
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
       const isDone = p.done === true;
       if (photos > 0 || isDone) {
-        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
+        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, suporte: suporteLabel(c), photos: 0 };
         byVenda[c.venda].photos += photos;
       }
     });
