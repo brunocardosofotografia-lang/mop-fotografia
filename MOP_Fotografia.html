@@ -1107,7 +1107,7 @@ function buildCounter(id, type, current, target, label) {
 
 function changeCount(e, id, type, delta) {
   e.stopPropagation();
-  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0 };
+  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0, done: false };
   state.progress[id][type] = Math.max(0, (state.progress[id][type] || 0) + delta);
   saveState();
 
@@ -1145,9 +1145,9 @@ function toggleCard(id, r, m, ip) {
 function updateCardDone(id) {
   const campaign = findCampaign(id);
   if (!campaign) return;
-  const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-  const isDone = p.r >= campaign.r && p.m >= campaign.m && p.ip >= campaign.ip &&
-                 (campaign.r + campaign.m + campaign.ip > 0);
+  const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
+  const isDone = p.done === true || (p.r >= campaign.r && p.m >= campaign.m && p.ip >= campaign.ip &&
+                 (campaign.r + campaign.m + campaign.ip > 0));
   const card = document.getElementById(`card_${id}`);
   if (card) {
     card.classList.toggle('done', isDone);
