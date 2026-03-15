@@ -1121,8 +1121,6 @@ function changeCount(e, id, type, delta) {
     valEl.classList.toggle('done', current >= target);
   }
 
-  // Update card done state
-  updateCardDone(id);
   updateProgress();
   saveState();
 }
