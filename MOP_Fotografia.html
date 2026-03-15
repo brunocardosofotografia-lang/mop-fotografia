@@ -805,8 +805,7 @@ function renderHome() {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-      const done = p.done === true ||
-                   (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+      const done = p.done === true;
       totalCampaigns++;
       if (done) totalDone++;
       totalPhotos += (p.r || 0) + (p.m || 0) + (p.ip || 0);
@@ -845,7 +844,7 @@ function renderHome() {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-      const done = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+      const done = p.done === true;
       wTotal++;
       if (done) wDone++;
       wPhotos += (p.r || 0) + (p.m || 0) + (p.ip || 0);
@@ -1002,7 +1001,7 @@ function renderCards() {
 
     const id = campaignId(c);
     const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-    const done = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+    const done = p.done === true;
 
     if (search && !c.campanha.toLowerCase().includes(search) &&
         !c.venda.toLowerCase().includes(search)) return false;
@@ -1056,7 +1055,7 @@ function renderCards() {
   list.innerHTML = filtered.map(c => {
     const id = campaignId(c);
     const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-    const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+    const isDone = p.done === true;
 
     const tags = [];
     if (c.r > 0) tags.push(`<span class="tag rua">RUA ×${c.r}</span>`);
@@ -1144,8 +1143,7 @@ function updateCardDone(id) {
   const campaign = findCampaign(id);
   if (!campaign) return;
   const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-  const isDone = p.done === true || (p.r >= campaign.r && p.m >= campaign.m && p.ip >= campaign.ip &&
-                 (campaign.r + campaign.m + campaign.ip > 0));
+  const isDone = p.done === true;
   const card = document.getElementById(`card_${id}`);
   if (card) {
     card.classList.toggle('done', isDone);
@@ -1190,7 +1188,7 @@ function renderReport() {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
-      const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+      const isDone = p.done === true;
       if (photos > 0 || isDone) {
         if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
         byVenda[c.venda].photos += photos;
@@ -1226,7 +1224,7 @@ function exportReport() {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
-      const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+      const isDone = p.done === true;
       if (photos > 0 || isDone) {
         if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
         byVenda[c.venda].photos += photos;
@@ -1256,7 +1254,7 @@ function copyReport() {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
-      const isDone = p.done === true || (p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0));
+      const isDone = p.done === true;
       if (photos > 0 || isDone) {
         if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
         byVenda[c.venda].photos += photos;
