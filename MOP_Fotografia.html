@@ -1236,17 +1236,17 @@ function exportReport() {
     });
   });
 
-  const lines = ['Nº Venda\tCampanha\tNº Fotos'];
+  const lines = ['Nº Venda;Campanha;Nº Fotos'];
   Object.entries(byVenda).sort().forEach(([v, d]) => {
-    lines.push(`${v}\t${d.campanha}\t${d.photos}`);
+    lines.push(`${v};${d.campanha};${d.photos}`);
   });
 
-  // BOM para Excel reconhecer UTF-8 + separador tab (funciona em Excel e Google Sheets)
+  // BOM UTF-8 + ponto e vírgula (padrão Excel português e Google Sheets)
   const bom = '\uFEFF';
-  const blob = new Blob([bom + lines.join('\n')], { type: 'text/tab-separated-values;charset=utf-8' });
+  const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'report_mop.tsv'; a.click();
+  a.href = url; a.download = 'report_mop.csv'; a.click();
   showToast('✓ Report exportado');
 }
 
