@@ -115,6 +115,24 @@
   .stat-value.red { color: var(--red); }
 
   /* ── FIELD VIEW ── */
+  /* ── SUBFILTER RMI ── */
+  .subfilter-bar {
+    display: none; flex-wrap: wrap; gap: 6px;
+    padding: 0 16px 10px;
+  }
+  .subfilter-bar.visible { display: flex; }
+  .subfilter-btn {
+    padding: 5px 12px; border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--muted);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .subfilter-btn.active {
+    background: var(--accent-light); color: var(--accent);
+    border-color: var(--accent);
+  }
+
   .filter-bar {
     display: flex; gap: 7px; margin-bottom: 14px; overflow-x: auto;
     padding-bottom: 2px; scrollbar-width: none;
@@ -356,6 +374,19 @@
   .week-btn.has-data { color: var(--text2); }
 
   #map { z-index: 1; }
+
+  /* ── BACK TO TOP ── */
+  .back-to-top {
+    position: fixed; bottom: 24px; right: 20px;
+    width: 40px; height: 40px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 50%;
+    font-size: 18px; cursor: pointer;
+    box-shadow: 0 2px 12px rgba(0,113,227,0.35);
+    display: none; align-items: center; justify-content: center;
+    z-index: 999; transition: opacity 0.2s;
+  }
+  .back-to-top.visible { display: flex; }
   .leaflet-popup-content-wrapper {
     border-radius: 10px !important;
     box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
@@ -562,7 +593,9 @@ var state = {
   activeWeek: null,
   activeFilter: 'all',
   activeType: 'digital',
+  activeSubFilter: 'all',
   mapData: {},
+  userLocation: null,
   currentTab: 'home'
 };
 
@@ -701,7 +734,16 @@ function processRows(rows, weekName) {
     imported++;
   }
 
+  // Preservar progresso existente — só atualiza campanhas, mantém progresso registado
+  const existing = state.weeks[weekName];
   state.weeks[weekName] = { campaigns, loaded: new Date().toLocaleDateString('pt') };
+  // Manter progresso das campanhas que já existiam (pelo id)
+  if (existing) {
+    campaigns.forEach(c => {
+      const id = `${c.venda}_${c.suporte}`.replace(/[^a-zA-Z0-9_]/g, '_');
+      // Progresso já guardado em state.progress — não precisa de fazer nada extra
+    });
+  }
   state.activeWeek = weekName;
   saveState();
 
@@ -893,6 +935,17 @@ function renderFilterBar() {
   } else {
     state.activeFilter = 'all';
   }
+
+  // Mostrar subfiltros R/M/IP só quando filtro é 'pending'
+  const subBar = document.getElementById('subfilterBar');
+  if (subBar) {
+    subBar.classList.toggle('visible', state.activeFilter === 'pending');
+    if (state.activeFilter !== 'pending') state.activeSubFilter = 'all';
+    // Sync subfilter buttons
+    subBar.querySelectorAll('.subfilter-btn').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-sub') === state.activeSubFilter);
+    });
+  }
 }
 
 // ── SUPORTE LABEL ─────────────────────────────────────────────
@@ -911,6 +964,14 @@ function syncTypeToggle() {
   btns.forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-type') === state.activeType);
   });
+}
+
+function setSubFilter(sub, btn) {
+  state.activeSubFilter = sub;
+  document.querySelectorAll('.subfilter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards();
+  saveState();
 }
 
 function setType(type, btn) {
@@ -952,6 +1013,13 @@ function renderCards() {
         !c.venda.toLowerCase().includes(search)) return false;
 
     if (filter === 'pending' && done) return false;
+    // Subfiltro R/M/IP — só para campanhas por fazer
+    if (filter === 'pending' && state.activeSubFilter !== 'all') {
+      const sub = state.activeSubFilter;
+      if (sub === 'r'  && (p.r >= c.r || c.r === 0)) return false;
+      if (sub === 'm'  && (p.m >= c.m || c.m === 0)) return false;
+      if (sub === 'ip' && (p.ip >= c.ip || c.ip === 0)) return false;
+    }
     if (filter === 'done' && !done) return false;
     if (filter === '4x3' && c.subtype !== '4x3') return false;
     if (filter === 'flagship' && c.subtype !== 'flagship') return false;
@@ -1071,11 +1139,16 @@ function toggleDone(e, id, r, m, ip) {
   const isDone = p.r >= r && p.m >= m && p.ip >= ip && (r + m + ip > 0);
 
   if (isDone) {
-    // Uncheck
+    // Desmarcar — repõe a zero
     state.progress[id] = { r: 0, m: 0, ip: 0 };
   } else {
-    // Mark all done
-    state.progress[id] = { r, m, ip };
+    // Marcar como concluída — apenas conta o que foi realmente registado
+    // Se o contador estiver a 0, mantém 0 (não preenche automaticamente)
+    state.progress[id] = {
+      r: p.r > 0 ? p.r : r,
+      m: p.m > 0 ? p.m : m,
+      ip: p.ip > 0 ? p.ip : ip
+    };
   }
   saveState();
   renderCards();
@@ -1179,15 +1252,17 @@ function exportReport() {
     });
   });
 
-  const lines = ['Nº Venda,Campanha,Nº Fotos'];
+  const lines = ['Nº Venda\tCampanha\tNº Fotos'];
   Object.entries(byVenda).sort().forEach(([v, d]) => {
-    lines.push(`"${v}","${d.campanha}",${d.photos}`);
+    lines.push(`${v}\t${d.campanha}\t${d.photos}`);
   });
 
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  // BOM para Excel reconhecer UTF-8 + separador tab (funciona em Excel e Google Sheets)
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + lines.join('\n')], { type: 'text/tab-separated-values;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'report_mop.csv'; a.click();
+  a.href = url; a.download = 'report_mop.tsv'; a.click();
   showToast('✓ Report exportado');
 }
 
@@ -1345,7 +1420,7 @@ function processAnalogRows(rows, weekName) {
   if (!state.weeks[weekName]) {
     state.weeks[weekName] = { campaigns: [], loaded: new Date().toLocaleDateString('pt') };
   }
-  // Remover analógicos anteriores desta semana e adicionar os novos
+  // Remover analógicos anteriores desta semana e adicionar os novos (mantém progresso em state.progress)
   state.weeks[weekName].campaigns = [
     ...state.weeks[weekName].campaigns.filter(c => c.subtype !== 'analog'),
     ...campaigns
@@ -1542,7 +1617,6 @@ function processMapRows(rows) {
 
 function initLeafletMap() {
   setTimeout(() => {
-    // Destroy existing map instance to avoid "already initialized" error
     if (leafletMap) {
       leafletMap.remove();
       leafletMap = null;
@@ -1550,19 +1624,44 @@ function initLeafletMap() {
     }
     const mapEl = document.getElementById('map');
     if (!mapEl) return;
-    // Force height so Leaflet can measure it
     mapEl.style.height = '420px';
     leafletMap = L.map('map', { zoomControl: true }).setView([38.736, -9.142], 12);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap © CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19
+      subdomains: 'abcd', maxZoom: 19
     }).addTo(leafletMap);
     leafletMap.invalidateSize(true);
-    // Show selected campaign if any
-    const sel = document.getElementById('campaignSelect');
-    if (sel && sel.value) showMapCampaign(sel.value);
+
+    // Obter localização atual
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        updateUserLocationMarker();
+        const sel = document.getElementById('campaignSelect');
+        if (sel && sel.value) showMapCampaign(sel.value);
+      }, () => {
+        const sel = document.getElementById('campaignSelect');
+        if (sel && sel.value) showMapCampaign(sel.value);
+      });
+    } else {
+      const sel = document.getElementById('campaignSelect');
+      if (sel && sel.value) showMapCampaign(sel.value);
+    }
   }, 300);
+}
+
+var userLocationMarker = null;
+function updateUserLocationMarker() {
+  if (!leafletMap || !state.userLocation) return;
+  if (userLocationMarker) userLocationMarker.remove();
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:#ff3b30;border:2px solid #fff;box-shadow:0 0 0 3px rgba(255,59,48,0.25)"></div>`,
+    iconSize: [14, 14], iconAnchor: [7, 7]
+  });
+  userLocationMarker = L.marker([state.userLocation.lat, state.userLocation.lng], { icon })
+    .addTo(leafletMap)
+    .bindPopup('<strong>A tua localização</strong>');
 }
 
 function renderMapView() {
@@ -1599,11 +1698,22 @@ function filterMap() {
 
 function showMapCampaign(name) {
   const campanhas = state.mapData || {};
-  const mupis = campanhas[name] || [];
+  let mupis = [...(campanhas[name] || [])];
   clearMapMarkers();
 
   if (!leafletMap) return;
 
+  // Ordenar por proximidade se tiver localização
+  if (state.userLocation) {
+    const ul = state.userLocation;
+    mupis.sort((a, b) => {
+      const da = Math.pow(a.lat - ul.lat, 2) + Math.pow(a.lng - ul.lng, 2);
+      const db = Math.pow(b.lat - ul.lat, 2) + Math.pow(b.lng - ul.lng, 2);
+      return da - db;
+    });
+  }
+
+  updateUserLocationMarker();
   const bounds = [];
 
   mupis.forEach(m => {
@@ -1616,9 +1726,14 @@ function showMapCampaign(name) {
       fillOpacity: 0.85
     }).addTo(leafletMap);
 
+    let distStr = '';
+    if (state.userLocation) {
+      const d = Math.sqrt(Math.pow(m.lat - state.userLocation.lat, 2) + Math.pow(m.lng - state.userLocation.lng, 2)) * 111;
+      distStr = `<br><span style="color:#0071e3;font-weight:600">${d < 1 ? Math.round(d*1000)+'m' : d.toFixed(1)+'km'} de distância</span>`;
+    }
     marker.bindPopup(`
       <strong>${m.mupi}</strong><br>
-      <span style="color:#86868b">${m.morada}</span>
+      <span style="color:#86868b">${m.morada}</span>${distStr}
     `);
     mapMarkers.push(marker);
     bounds.push([m.lat, m.lng]);
@@ -1641,6 +1756,11 @@ function clearMapMarkers() {
 loadState();
 renderAll();
 initDropZone();
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('backToTop');
+  if (btn) btn.classList.toggle('visible', window.scrollY > 200);
+});
 </script>
+  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 </body>
 </html>
