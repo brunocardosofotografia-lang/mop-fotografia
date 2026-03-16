@@ -1259,8 +1259,15 @@ function exportReport() {
   ws['!cols'] = [{ wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 10 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report MOP');
-  XLSX.writeFile(wb, 'report_mop.xlsx');
-  showToast('✓ Report exportado');
+  // Gerar CSV para download via window.location (compatível com Safari/GitHub Pages)
+  const csvLines = ['\uFEFFNº Venda;Campanha;Suporte;Nº Fotos'];
+  Object.entries(byVenda).sort().forEach(([v, d]) => {
+    csvLines.push([v, d.campanha, d.suporte, d.photos]
+      .map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';'));
+  });
+  const csvUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvLines.join('\n'));
+  window.location.href = csvUri;
+  showToast('✓ A guardar report...');
 }
 
 function copyReport() {
@@ -1462,14 +1469,11 @@ function exportProgress() {
     activeType: state.activeType,
     mapData: state.mapData || {}
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const json = JSON.stringify(data, null, 2);
   const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
-  a.href = url;
-  a.download = `mop_progresso_${date}.json`;
-  a.click();
-  showToast('✓ Progresso exportado');
+  const uri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(json);
+  window.location.href = uri;
+  showToast('✓ A guardar progresso...');
 }
 
 function importProgress(file) {
