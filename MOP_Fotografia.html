@@ -1559,9 +1559,16 @@ function importProgress(file) {
         return;
       }
       // Merge — manter semanas locais e sobrescrever progresso
-      if (data.weeks) state.weeks = { ...state.weeks, ...data.weeks };
+      if (data.weeks) {
+        // Garantir que cada semana tem estrutura válida
+        Object.keys(data.weeks).forEach(w => {
+          if (!data.weeks[w]) data.weeks[w] = { campaigns: [], loaded: '' };
+          if (!data.weeks[w].campaigns) data.weeks[w].campaigns = [];
+        });
+        state.weeks = { ...state.weeks, ...data.weeks };
+      }
       if (data.progress) state.progress = { ...state.progress, ...data.progress };
-      if (data.activeWeek) state.activeWeek = data.activeWeek;
+      if (data.activeWeek && state.weeks[data.activeWeek]) state.activeWeek = data.activeWeek;
       if (data.activeType) state.activeType = data.activeType;
       // mapData não importado — importa o ficheiro de mapa separadamente
       saveState();
