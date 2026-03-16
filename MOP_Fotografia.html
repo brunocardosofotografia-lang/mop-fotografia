@@ -1259,16 +1259,7 @@ function exportReport() {
   ws['!cols'] = [{ wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 10 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report MOP');
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([wbout], { type: 'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.style.display = 'none';
-  a.href = url;
-  a.download = 'report_mop.xlsx';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+  XLSX.writeFile(wb, 'report_mop.xlsx');
   showToast('✓ Report exportado');
 }
 
@@ -1471,19 +1462,13 @@ function exportProgress() {
     activeType: state.activeType,
     mapData: state.mapData || {}
   };
-  const json = JSON.stringify(data, null, 2);
-  const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
-  const filename = `mop_progresso_${date}.json`;
-  // Use blob + revokeObjectURL for better Safari compatibility
-  const blob = new Blob([json], { type: 'application/octet-stream' });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.style.display = 'none';
+  const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
   a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
+  a.download = `mop_progresso_${date}.json`;
   a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
   showToast('✓ Progresso exportado');
 }
 
