@@ -1381,13 +1381,25 @@ function processAnalogRows(rows, weekName) {
   const campaigns = [];
   let imported = 0, skipped = 0;
 
+  // Extrair número da semana de weekName (ex: "S12" → 12)
+  const weekNum = parseFloat(weekName.replace(/[^0-9]/g, ''));
+
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const campanha = String(row[0] || '').trim();   // A = CAMPANHA
     const formato  = String(row[1] || '').trim();   // B = Formato
-    const venda    = String(row[12] || '').trim();  // M = Nº Venda
+    const semanaRow = parseFloat(String(row[3] || '').trim()); // D = Semana
+    let venda      = String(row[12] || '').trim();  // M = Nº Venda
 
-    if (!campanha || !venda) { skipped++; continue; }
+    if (!campanha) { skipped++; continue; }
+
+    // Filtrar pela semana selecionada (se o ficheiro tiver coluna D preenchida)
+    if (!isNaN(semanaRow) && !isNaN(weekNum) && semanaRow !== weekNum) {
+      skipped++; continue;
+    }
+
+    // Se não tem Nº Venda, gera um identificador automático
+    if (!venda) venda = 'SV.' + campanha.substring(0, 8).replace(/[^a-zA-Z0-9]/g, '');
 
     // Calcular fotos por formato
     const fUp = formato.toUpperCase();
