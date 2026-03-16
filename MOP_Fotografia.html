@@ -1259,14 +1259,16 @@ function exportReport() {
   ws['!cols'] = [{ wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 10 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report MOP');
-  // Safari-compatible download
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + wbout;
+  a.style.display = 'none';
+  a.href = url;
   a.download = 'report_mop.xlsx';
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
   showToast('✓ Report exportado');
 }
 
@@ -1471,13 +1473,17 @@ function exportProgress() {
   };
   const json = JSON.stringify(data, null, 2);
   const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
-  const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
+  const filename = `mop_progresso_${date}.json`;
+  // Use blob + revokeObjectURL for better Safari compatibility
+  const blob = new Blob([json], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = `mop_progresso_${date}.json`;
+  a.style.display = 'none';
+  a.href = url;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
   showToast('✓ Progresso exportado');
 }
 
