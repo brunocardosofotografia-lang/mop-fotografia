@@ -619,7 +619,15 @@ function loadState() {
 }
 
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e) {
+    // localStorage cheio — tentar sem mapData
+    try {
+      const s = { ...state, mapData: {} };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    } catch(e2) { console.error('Save failed:', e2); }
+  }
 }
 
 // ── CAMPAIGN ID ────────────────────────────────────────────────
@@ -1522,8 +1530,8 @@ function exportProgress() {
     weeks: state.weeks,
     progress: state.progress,
     activeWeek: state.activeWeek,
-    activeType: state.activeType,
-    mapData: state.mapData || {}
+    activeType: state.activeType
+    // mapData não incluído — fica no dispositivo (é muito grande para sincronizar)
   };
   const json = JSON.stringify(data, null, 2);
   const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
@@ -1546,7 +1554,7 @@ function importProgress(file) {
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
-      if (!data.version || !data.progress) {
+      if (!data.version || (!data.progress && !data.weeks)) {
         showToast('❌ Ficheiro inválido');
         return;
       }
@@ -1555,16 +1563,19 @@ function importProgress(file) {
       if (data.progress) state.progress = { ...state.progress, ...data.progress };
       if (data.activeWeek) state.activeWeek = data.activeWeek;
       if (data.activeType) state.activeType = data.activeType;
-      if (data.mapData) state.mapData = data.mapData;
+      // mapData não importado — importa o ficheiro de mapa separadamente
       saveState();
       renderAll();
       showToast('✓ Progresso importado');
       // Reset input
       document.getElementById('progressInput').value = '';
-    } catch(e) {
-      showToast('❌ Erro ao ler o ficheiro');
+    } catch(err) {
+      console.error('Import error:', err);
+      // Tentar com encoding diferente se falhou
+      showToast('❌ Erro ao ler o ficheiro: ' + err.message);
     }
   };
+  reader.onerror = () => showToast('❌ Erro ao ler o ficheiro');
   reader.readAsText(file);
 }
 
