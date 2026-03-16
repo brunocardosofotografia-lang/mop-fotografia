@@ -133,6 +133,13 @@
     border-color: var(--accent);
   }
 
+  .filter-row {
+    display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px;
+  }
+  .filter-row-suporte {
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+  }
   .filter-bar {
     display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px;
   }
@@ -556,8 +563,10 @@
   </div>
   <div id="reportContent" style="display:none">
     <div class="report-header">
-      <div class="report-title">Report Fotográfico Mensal</div>
+      <div class="report-title" id="reportTitle">Report Fotográfico</div>
       <div class="report-sub" id="reportSub"></div>
+    </div>
+    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;" id="reportWeekFilter">
     </div>
     <div class="report-table-wrap"><table class="report-table" id="reportTable">
       <thead>
@@ -594,6 +603,7 @@ var state = {
   activeFilter: 'all',
   activeType: 'digital',
   activeSubFilter: 'all',
+  activeReportWeek: 'all',
   mapData: {},
   userLocation: null,
   currentTab: 'home'
@@ -909,13 +919,18 @@ function renderFilterBar() {
   const bar = document.getElementById('filterBar');
   const isAnalog = state.activeType === 'analog';
 
-  let btns = `
-    <button class="filter-btn active" onclick="setFilter('all', this)">Todas</button>
-    <button class="filter-btn" onclick="setFilter('pending', this)">Por fazer</button>
-    <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
+  // Linha 1 — estado
+  let row1 = `
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="setFilter('all', this)">Todas</button>
+      <button class="filter-btn" onclick="setFilter('pending', this)">Por fazer</button>
+      <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
+    </div>
   `;
 
-  if (!isAnalog) btns += `
+  // Linha 2 — suporte
+  let row2btns = '';
+  if (!isAnalog) row2btns = `
     <button class="filter-btn" onclick="setFilter('tv', this)">Ecrãs TV</button>
     <button class="filter-btn" onclick="setFilter('leds', this)">Led's</button>
     <button class="filter-btn" onclick="setFilter('4x3', this)">Led 4x3</button>
@@ -923,8 +938,7 @@ function renderFilterBar() {
     <button class="filter-btn" onclick="setFilter('tomi', this)">Tomi</button>
     <button class="filter-btn" onclick="setFilter('3ecras', this)">3 Ecrãs</button>
   `;
-
-  if (isAnalog) btns += `
+  if (isAnalog) row2btns = `
     <button class="filter-btn" onclick="setFilter('mupis', this)">Mupis</button>
     <button class="filter-btn" onclick="setFilter('ppa', this)">PPA</button>
     <button class="filter-btn" onclick="setFilter('8x3', this)">8x3</button>
@@ -935,9 +949,9 @@ function renderFilterBar() {
     <button class="filter-btn" onclick="setFilter('flashes', this)">Flashes</button>
   `;
 
-  bar.innerHTML = btns;
+  bar.innerHTML = row1 + `<div class="filter-row filter-row-suporte">${row2btns}</div>`;
 
-  // Reactivar filtro atual se ainda existir, senão resetar para 'all'
+  // Reactivar filtro atual
   const activeBtn = bar.querySelector(`[onclick="setFilter('${state.activeFilter}', this)"]`);
   if (activeBtn) {
     bar.querySelector('.filter-btn').classList.remove('active');
@@ -946,12 +960,11 @@ function renderFilterBar() {
     state.activeFilter = 'all';
   }
 
-  // Mostrar subfiltros R/M/IP só quando filtro é 'pending'
+  // Subfiltros R/M/IP
   const subBar = document.getElementById('subfilterBar');
   if (subBar) {
     subBar.classList.toggle('visible', state.activeFilter === 'pending');
     if (state.activeFilter !== 'pending') state.activeSubFilter = 'all';
-    // Sync subfilter buttons
     subBar.querySelectorAll('.subfilter-btn').forEach(b => {
       b.classList.toggle('active', b.getAttribute('data-sub') === state.activeSubFilter);
     });
@@ -1193,13 +1206,41 @@ function findCampaign(id) {
 }
 
 // ── REPORT ─────────────────────────────────────────────────────
+function setReportWeek(week) {
+  state.activeReportWeek = week;
+  saveState();
+  renderReport();
+}
+
 function renderReport() {
   const weeks = Object.keys(state.weeks);
   if (!weeks.length) return;
 
+  const hasData = weeks.some(w => state.weeks[w].campaigns.length > 0);
+  document.getElementById('reportEmpty').style.display = hasData ? 'none' : 'block';
+  document.getElementById('reportContent').style.display = hasData ? 'block' : 'none';
+  if (!hasData) return;
+
+  // Render week filter buttons
+  const filterEl = document.getElementById('reportWeekFilter');
+  if (filterEl) {
+    const allActive = state.activeReportWeek === 'all';
+    let btns = `<button class="filter-btn ${allActive ? 'active' : ''}" onclick="setReportWeek('all')">Mês completo</button>`;
+    weeks.forEach(w => {
+      const active = state.activeReportWeek === w;
+      btns += `<button class="filter-btn ${active ? 'active' : ''}" onclick="setReportWeek('${w}')">${w}</button>`;
+    });
+    filterEl.innerHTML = btns;
+  }
+
+  // Filter by selected week
+  const activeWeeks = state.activeReportWeek === 'all' ? weeks : [state.activeReportWeek];
+  const titleEl = document.getElementById('reportTitle');
+  if (titleEl) titleEl.textContent = state.activeReportWeek === 'all' ? 'Report Fotográfico — Mês' : `Report Fotográfico — ${state.activeReportWeek}`;
+
   // Aggregate photos by venda number
   const byVenda = {};
-  weeks.forEach(w => {
+  activeWeeks.forEach(w => {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
       const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
