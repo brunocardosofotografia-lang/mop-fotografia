@@ -1259,15 +1259,18 @@ function exportReport() {
   ws['!cols'] = [{ wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 10 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report MOP');
-  // Gerar CSV para download via window.location (compatível com Safari/GitHub Pages)
-  const csvLines = ['\uFEFFNº Venda;Campanha;Suporte;Nº Fotos'];
-  Object.entries(byVenda).sort().forEach(([v, d]) => {
-    csvLines.push([v, d.campanha, d.suporte, d.photos]
-      .map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';'));
-  });
-  const csvUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvLines.join('\n'));
-  window.location.href = csvUri;
-  showToast('✓ A guardar report...');
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = 'report_mop.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✓ Report exportado');
 }
 
 function copyReport() {
@@ -1471,9 +1474,17 @@ function exportProgress() {
   };
   const json = JSON.stringify(data, null, 2);
   const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
-  const uri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(json);
-  window.location.href = uri;
-  showToast('✓ A guardar progresso...');
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = `mop_progresso_${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✓ Progresso exportado');
 }
 
 function importProgress(file) {
