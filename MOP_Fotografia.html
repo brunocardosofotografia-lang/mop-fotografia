@@ -115,34 +115,11 @@
   .stat-value.red { color: var(--red); }
 
   /* ── FIELD VIEW ── */
-  /* ── SUBFILTER RMI ── */
-  .subfilter-bar {
-    display: none; flex-wrap: wrap; gap: 6px;
-    padding: 0 16px 10px;
-  }
-  .subfilter-bar.visible { display: flex; }
-  .subfilter-btn {
-    padding: 5px 12px; border-radius: 20px;
-    border: 1.5px solid var(--border);
-    background: var(--surface); color: var(--muted);
-    font-size: 12px; font-weight: 600; cursor: pointer;
-    transition: all 0.15s;
-  }
-  .subfilter-btn.active {
-    background: var(--accent-light); color: var(--accent);
-    border-color: var(--accent);
-  }
-
-  .filter-row {
-    display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px;
-  }
-  .filter-row-suporte {
-    padding-top: 4px;
-    border-top: 1px solid var(--border);
-  }
   .filter-bar {
-    display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px;
+    display: flex; gap: 7px; margin-bottom: 14px; overflow-x: auto;
+    padding-bottom: 2px; scrollbar-width: none;
   }
+  .filter-bar::-webkit-scrollbar { display: none; }
   .filter-btn {
     white-space: nowrap; padding: 6px 14px; border-radius: 20px;
     border: 1px solid var(--border); background: var(--surface);
@@ -379,19 +356,6 @@
   .week-btn.has-data { color: var(--text2); }
 
   #map { z-index: 1; }
-
-  /* ── BACK TO TOP ── */
-  .back-to-top {
-    position: fixed; bottom: 24px; right: 20px;
-    width: 40px; height: 40px;
-    background: var(--accent); color: #fff;
-    border: none; border-radius: 50%;
-    font-size: 18px; cursor: pointer;
-    box-shadow: 0 2px 12px rgba(0,113,227,0.35);
-    display: none; align-items: center; justify-content: center;
-    z-index: 999; transition: opacity 0.2s;
-  }
-  .back-to-top.visible { display: flex; }
   .leaflet-popup-content-wrapper {
     border-radius: 10px !important;
     box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
@@ -477,27 +441,25 @@
   </div>
   <div id="fieldContent" style="display:none">
     <div class="week-selector" id="weekSelector"></div>
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-      <div class="type-toggle" id="typeToggle" style="margin-bottom:0; flex:1;">
-        <button class="type-btn active" data-type="digital" onclick="setType('digital', this)">Digitais</button>
-        <button class="type-btn" data-type="analog" onclick="setType('analog', this)">Analógicos</button>
-      </div>
-      <button onclick="openNewCampaign()" style="
-        background:var(--accent); color:#fff; border:none;
-        border-radius:var(--radius-sm); padding:8px 12px;
-        font-size:14px; font-weight:700; cursor:pointer;
-        flex-shrink:0; box-shadow:var(--shadow);">+ Nova</button>
+    <div class="type-toggle" id="typeToggle">
+      <button class="type-btn active" data-type="digital" onclick="setType('digital', this)">Digitais</button>
+      <button class="type-btn" data-type="analog" onclick="setType('analog', this)">Analógicos</button>
     </div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="Pesquisar campanha..." oninput="renderCards()">
     </div>
-    <div class="filter-bar" id="filterBar"></div>
-    <div class="subfilter-bar" id="subfilterBar">
-      <button class="subfilter-btn active" data-sub="all" onclick="setSubFilter('all', this)">Todas</button>
-      <button class="subfilter-btn" data-sub="r" onclick="setSubFilter('r', this)">Falta Rua</button>
-      <button class="subfilter-btn" data-sub="m" onclick="setSubFilter('m', this)">Falta Metro</button>
-      <button class="subfilter-btn" data-sub="ip" onclick="setSubFilter('ip', this)">Falta IP</button>
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-btn active" onclick="setFilter('all', this)">Todas</button>
+      <button class="filter-btn" onclick="setFilter('pending', this)">Por fazer</button>
+      <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
+      <button class="filter-btn" onclick="setFilter('tv', this)">Ecrãs TV</button>
+      <button class="filter-btn" onclick="setFilter('leds', this)">Led's</button>
+      <button class="filter-btn" onclick="setFilter('4x3', this)">Led 4x3</button>
+      <button class="filter-btn" onclick="setFilter('flagship', this)">Flagship</button>
+      <button class="filter-btn" onclick="setFilter('tomi', this)">Tomi</button>
+      <button class="filter-btn" onclick="setFilter('analog', this)">Analógicos</button>
+      <button class="filter-btn" onclick="setFilter('3ecras', this)">3 Ecrãs</button>
     </div>
     <div class="progress-bar-wrap">
       <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
@@ -563,10 +525,8 @@
   </div>
   <div id="reportContent" style="display:none">
     <div class="report-header">
-      <div class="report-title" id="reportTitle">Report Fotográfico</div>
+      <div class="report-title">Report Fotográfico Mensal</div>
       <div class="report-sub" id="reportSub"></div>
-    </div>
-    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;" id="reportWeekFilter">
     </div>
     <div class="report-table-wrap"><table class="report-table" id="reportTable">
       <thead>
@@ -602,10 +562,7 @@ var state = {
   activeWeek: null,
   activeFilter: 'all',
   activeType: 'digital',
-  activeSubFilter: 'all',
-  activeReportWeek: 'all',
   mapData: {},
-  userLocation: null,
   currentTab: 'home'
 };
 
@@ -619,20 +576,12 @@ function loadState() {
 }
 
 function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch(e) {
-    // localStorage cheio — tentar sem mapData
-    try {
-      const s = { ...state, mapData: {} };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-    } catch(e2) { console.error('Save failed:', e2); }
-  }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
 }
 
 // ── CAMPAIGN ID ────────────────────────────────────────────────
 function campaignId(c) {
-  return `${c.venda}_${c.suporte}`.replace(/[^a-zA-Z0-9_]/g, '_');
+  return `${c.venda}_${c.suporte}_${c.rede || ''}`.replace(/[^a-zA-Z0-9_]/g, '_');
 }
 
 // ── FILE IMPORT ────────────────────────────────────────────────
@@ -681,21 +630,27 @@ function processRows(rows, weekName) {
 
   const campaigns = [];
   let imported = 0, skipped = 0;
+  let svCounter = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const colA = String(row[0] || '').trim();   // Nº REFERÊNCIA
+    let   colA = String(row[0] || '').trim();   // Nº REFERÊNCIA
     const colD = String(row[3] || '').trim();   // REDE/ISOLADO
     const colG = String(row[6] || '').trim();   // FORMATO
     const colI = String(row[8] || '').trim();   // CAMPANHA
     const colJ = String(row[9] || '').trim();   // Lisboa/Nacional/Porto
     const colK = String(row[10] || '').trim();  // notas/filtros
 
-    // Valid reference check
+    // Normalizar V, → V. (vírgula em vez de ponto)
+    if (/^V,/i.test(colA)) colA = 'V.' + colA.slice(2);
+
+    // Valid reference check — aceitar V. V, SV sv e referências vazias com campanha
     const colAupper = colA.toUpperCase();
-    const isRef = colA === '' || colAupper === 'SV' ||
-                  colAupper.startsWith('V.') || /^V\.\d/.test(colA);
-    if (!isRef) { skipped++; continue; }
+    const isValidRef = colAupper.startsWith('V.') || colAupper === 'SV' || colA === '';
+    // Referência incompleta (V. sem número) ou texto inválido com campanha válida → SV
+    const isIncomplete = colAupper === 'V.' || /^falta\s*venda/i.test(colA);
+
+    if (!isValidRef && !isIncomplete && colA !== '') { skipped++; continue; }
     if (!colA && !colI) { skipped++; continue; }
 
     // Ignorar linhas de cabeçalho de distribuição (ex: "Rua:", "Metro:", etc.)
@@ -706,6 +661,12 @@ function processRows(rows, weekName) {
     if (colJ.toLowerCase().includes('porto'))      { skipped++; continue; }
     if (colK.toLowerCase().includes('continua'))   { skipped++; continue; }
     if (colK.toLowerCase().includes('brandstore')) { skipped++; continue; }
+
+    // Atribuir SV1, SV2... a referências em falta ou incompletas
+    if (!colA || colAupper === 'SV' || colAupper === 'V.' || isIncomplete) {
+      svCounter++;
+      colA = `SV${svCounter}`;
+    }
 
     // Calculate photos
     let r = 0, m = 0, ip = 0, subtype = '';
@@ -718,10 +679,11 @@ function processRows(rows, weekName) {
       r = 3;
     } else if (fmtUp.includes("LED") && (fmtUp.includes("LED'S") || fmtUp.includes('LEDS') || colG.toLowerCase().includes("led's"))) {
       // Ecrãs Led's — distinguir Flagship / 4x3 / normal
-      if (redeUp.toUpperCase().includes('FLAGSHIP')) {
+      const redeNorm = colD.toUpperCase().replace(/\s/g,'');
+      if (redeNorm.includes('FLAGSHIP') || redeNorm.includes('FLASG')) {
         // Flagship → 2 fotos rua
         r = 2; subtype = 'flagship';
-      } else if (redeUp.toUpperCase().includes('4X3')) {
+      } else if (redeNorm.includes('4X3') || redeNorm.includes('LED4X3') || colD.toLowerCase().includes('4x3')) {
         // Led 4x3 → 3 fotos rua
         r = 3; subtype = '4x3';
       } else {
@@ -738,8 +700,8 @@ function processRows(rows, weekName) {
       else if (semRua)  { m = 2; ip = 2; }
       else              { r = 2; m = 2; ip = 2; }
     } else if (fmtUp.includes('3') && (fmtUp.includes('ECRÃ') || fmtUp.includes('ECRA'))) {
-      // Digital – 3 ecrãs — só Metro
-      r = 0; m = 3; ip = 0;
+      // Digital – 3 ecrãs — igual ao TV
+      r = 2; m = 2; ip = 2;
     } else if (fmtUp.includes('TOMI') || colG.toLowerCase() === 'tomi') {
       // Tomi — sempre 1 foto metro
       m = 1;
@@ -748,30 +710,10 @@ function processRows(rows, weekName) {
     const notas = (colK && !colK.toUpperCase().includes('CONTINUA') &&
                    !colK.toUpperCase().includes('BRANDSTORE')) ? colK : '';
 
-    // Agrupar por Nº de Venda — se já existe, adiciona localização às notas
-    const existingCamp = campaigns.find(c => c.venda === colA);
-    if (existingCamp) {
-      // Adicionar localização às notas
-      if (notas && !existingCamp.notas.includes(notas)) {
-        existingCamp.notas = existingCamp.notas
-          ? existingCamp.notas + ' · ' + notas
-          : notas;
-      }
-      // Não incrementa imported — é a mesma campanha
-    } else {
-      campaigns.push({ venda: colA, campanha: colI, suporte: colG, subtype, notas, r, m, ip });
-      imported++;
-    }
+    campaigns.push({ venda: colA, campanha: colI, suporte: colG, rede: colD, subtype, notas, r, m, ip });
+    imported++;
   }
 
-  // Preservar campanhas manuais e analógicas ao reimportar
-  const existing = state.weeks[weekName];
-  if (existing) {
-    const manuais = existing.campaigns.filter(c => c.manual === true);
-    const analogicas = existing.campaigns.filter(c => c.subtype === 'analog');
-    // Juntar campanhas importadas com manuais e analógicas existentes
-    campaigns.push(...manuais, ...analogicas);
-  }
   state.weeks[weekName] = { campaigns, loaded: new Date().toLocaleDateString('pt') };
   state.activeWeek = weekName;
   saveState();
@@ -838,8 +780,9 @@ function renderHome() {
   weeks.forEach(w => {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-      const done = p.done === true;
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip &&
+                   (c.r + c.m + c.ip > 0);
       totalCampaigns++;
       if (done) totalDone++;
       totalPhotos += (p.r || 0) + (p.m || 0) + (p.ip || 0);
@@ -877,8 +820,8 @@ function renderHome() {
     let wDone = 0, wTotal = 0, wPhotos = 0;
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-      const done = p.done === true;
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
       wTotal++;
       if (done) wDone++;
       wPhotos += (p.r || 0) + (p.m || 0) + (p.ip || 0);
@@ -927,18 +870,13 @@ function renderFilterBar() {
   const bar = document.getElementById('filterBar');
   const isAnalog = state.activeType === 'analog';
 
-  // Linha 1 — estado
-  let row1 = `
-    <div class="filter-row">
-      <button class="filter-btn active" onclick="setFilter('all', this)">Todas</button>
-      <button class="filter-btn" onclick="setFilter('pending', this)">Por fazer</button>
-      <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
-    </div>
+  let btns = `
+    <button class="filter-btn active" onclick="setFilter('all', this)">Todas</button>
+    <button class="filter-btn" onclick="setFilter('pending', this)">Por fazer</button>
+    <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
   `;
 
-  // Linha 2 — suporte
-  let row2btns = '';
-  if (!isAnalog) row2btns = `
+  if (!isAnalog) btns += `
     <button class="filter-btn" onclick="setFilter('tv', this)">Ecrãs TV</button>
     <button class="filter-btn" onclick="setFilter('leds', this)">Led's</button>
     <button class="filter-btn" onclick="setFilter('4x3', this)">Led 4x3</button>
@@ -946,7 +884,8 @@ function renderFilterBar() {
     <button class="filter-btn" onclick="setFilter('tomi', this)">Tomi</button>
     <button class="filter-btn" onclick="setFilter('3ecras', this)">3 Ecrãs</button>
   `;
-  if (isAnalog) row2btns = `
+
+  if (isAnalog) btns += `
     <button class="filter-btn" onclick="setFilter('mupis', this)">Mupis</button>
     <button class="filter-btn" onclick="setFilter('ppa', this)">PPA</button>
     <button class="filter-btn" onclick="setFilter('8x3', this)">8x3</button>
@@ -957,25 +896,15 @@ function renderFilterBar() {
     <button class="filter-btn" onclick="setFilter('flashes', this)">Flashes</button>
   `;
 
-  bar.innerHTML = row1 + `<div class="filter-row filter-row-suporte">${row2btns}</div>`;
+  bar.innerHTML = btns;
 
-  // Reactivar filtro atual
+  // Reactivar filtro atual se ainda existir, senão resetar para 'all'
   const activeBtn = bar.querySelector(`[onclick="setFilter('${state.activeFilter}', this)"]`);
   if (activeBtn) {
     bar.querySelector('.filter-btn').classList.remove('active');
     activeBtn.classList.add('active');
   } else {
     state.activeFilter = 'all';
-  }
-
-  // Subfiltros R/M/IP
-  const subBar = document.getElementById('subfilterBar');
-  if (subBar) {
-    subBar.classList.toggle('visible', state.activeFilter === 'pending');
-    if (state.activeFilter !== 'pending') state.activeSubFilter = 'all';
-    subBar.querySelectorAll('.subfilter-btn').forEach(b => {
-      b.classList.toggle('active', b.getAttribute('data-sub') === state.activeSubFilter);
-    });
   }
 }
 
@@ -995,14 +924,6 @@ function syncTypeToggle() {
   btns.forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-type') === state.activeType);
   });
-}
-
-function setSubFilter(sub, btn) {
-  state.activeSubFilter = sub;
-  document.querySelectorAll('.subfilter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderCards();
-  saveState();
 }
 
 function setType(type, btn) {
@@ -1037,20 +958,13 @@ function renderCards() {
     if (!_isAnalog && c.subtype === 'analog') return false;
 
     const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-    const done = p.done === true;
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
 
     if (search && !c.campanha.toLowerCase().includes(search) &&
         !c.venda.toLowerCase().includes(search)) return false;
 
     if (filter === 'pending' && done) return false;
-    // Subfiltro R/M/IP — só para campanhas por fazer
-    if (filter === 'pending' && state.activeSubFilter !== 'all') {
-      const sub = state.activeSubFilter;
-      if (sub === 'r'  && (p.r >= c.r || c.r === 0)) return false;
-      if (sub === 'm'  && (p.m >= c.m || c.m === 0)) return false;
-      if (sub === 'ip' && (p.ip >= c.ip || c.ip === 0)) return false;
-    }
     if (filter === 'done' && !done) return false;
     if (filter === '4x3' && c.subtype !== '4x3') return false;
     if (filter === 'flagship' && c.subtype !== 'flagship') return false;
@@ -1075,8 +989,8 @@ function renderCards() {
   const total = campaigns.length;
   const done = campaigns.filter(c => {
     const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-    return p.done === true;
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    return p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
   }).length;
 
   document.getElementById('progressFill').style.width = total ? `${(done/total)*100}%` : '0%';
@@ -1091,8 +1005,8 @@ function renderCards() {
 
   list.innerHTML = filtered.map(c => {
     const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-    const isDone = p.done === true;
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    const isDone = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
 
     const tags = [];
     if (c.r > 0) tags.push(`<span class="tag rua">RUA ×${c.r}</span>`);
@@ -1107,7 +1021,7 @@ function renderCards() {
     return `
       <div class="card ${isDone ? 'done' : ''}" id="card_${id}">
         <div class="card-header" onclick="toggleCard('${id}', ${c.r}, ${c.m}, ${c.ip})">
-          <div class="card-check" onclick="toggleDone(event,'${id}')">
+          <div class="card-check" onclick="toggleDone(event,'${id}',${c.r},${c.m},${c.ip})">
             <span class="card-check-icon">✓</span>
           </div>
           <div class="card-info">
@@ -1120,6 +1034,7 @@ function renderCards() {
           </div>
         </div>
         ${counters.length ? `<div class="card-photos">${counters.join('')}</div>` : ''}
+        ${c.rede ? `<div class="card-notes" style="color:var(--muted)">📍 ${c.rede}</div>` : ''}
         ${c.notas ? `<div class="card-notes">📌 ${c.notas}</div>` : ''}
       </div>
     `;
@@ -1143,7 +1058,7 @@ function buildCounter(id, type, current, target, label) {
 
 function changeCount(e, id, type, delta) {
   e.stopPropagation();
-  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0, done: false };
+  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0 };
   state.progress[id][type] = Math.max(0, (state.progress[id][type] || 0) + delta);
   saveState();
 
@@ -1157,15 +1072,25 @@ function changeCount(e, id, type, delta) {
     valEl.classList.toggle('done', current >= target);
   }
 
+  // Update card done state
+  updateCardDone(id);
   updateProgress();
   saveState();
 }
 
-function toggleDone(e, id) {
+function toggleDone(e, id, r, m, ip) {
   e.stopPropagation();
-  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0, done: false };
-  // Apenas alterna o flag "done" — não toca nos contadores
-  state.progress[id].done = !state.progress[id].done;
+  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0 };
+  const p = state.progress[id];
+  const isDone = p.r >= r && p.m >= m && p.ip >= ip && (r + m + ip > 0);
+
+  if (isDone) {
+    // Uncheck
+    state.progress[id] = { r: 0, m: 0, ip: 0 };
+  } else {
+    // Mark all done
+    state.progress[id] = { r, m, ip };
+  }
   saveState();
   renderCards();
   renderHome();
@@ -1179,8 +1104,9 @@ function toggleCard(id, r, m, ip) {
 function updateCardDone(id) {
   const campaign = findCampaign(id);
   if (!campaign) return;
-  const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
-  const isDone = p.done === true;
+  const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+  const isDone = p.r >= campaign.r && p.m >= campaign.m && p.ip >= campaign.ip &&
+                 (campaign.r + campaign.m + campaign.ip > 0);
   const card = document.getElementById(`card_${id}`);
   if (card) {
     card.classList.toggle('done', isDone);
@@ -1198,7 +1124,7 @@ function updateProgress() {
   const total = campaigns.length;
   const done = campaigns.filter(c => {
     const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
     return p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
   }).length;
   document.getElementById('progressFill').style.width = total ? `${(done/total)*100}%` : '0%';
@@ -1214,48 +1140,19 @@ function findCampaign(id) {
 }
 
 // ── REPORT ─────────────────────────────────────────────────────
-function setReportWeek(week) {
-  state.activeReportWeek = week;
-  saveState();
-  renderReport();
-}
-
 function renderReport() {
   const weeks = Object.keys(state.weeks);
   if (!weeks.length) return;
 
-  const hasData = weeks.some(w => state.weeks[w].campaigns.length > 0);
-  document.getElementById('reportEmpty').style.display = hasData ? 'none' : 'block';
-  document.getElementById('reportContent').style.display = hasData ? 'block' : 'none';
-  if (!hasData) return;
-
-  // Render week filter buttons
-  const filterEl = document.getElementById('reportWeekFilter');
-  if (filterEl) {
-    const allActive = state.activeReportWeek === 'all';
-    let btns = `<button class="filter-btn ${allActive ? 'active' : ''}" onclick="setReportWeek('all')">Mês completo</button>`;
-    weeks.forEach(w => {
-      const active = state.activeReportWeek === w;
-      btns += `<button class="filter-btn ${active ? 'active' : ''}" onclick="setReportWeek('${w}')">${w}</button>`;
-    });
-    filterEl.innerHTML = btns;
-  }
-
-  // Filter by selected week
-  const activeWeeks = state.activeReportWeek === 'all' ? weeks : [state.activeReportWeek];
-  const titleEl = document.getElementById('reportTitle');
-  if (titleEl) titleEl.textContent = state.activeReportWeek === 'all' ? 'Report Fotográfico — Mês' : `Report Fotográfico — ${state.activeReportWeek}`;
-
   // Aggregate photos by venda number
   const byVenda = {};
-  activeWeeks.forEach(w => {
+  weeks.forEach(w => {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
-      const isDone = p.done === true;
-      if (photos > 0 || isDone) {
-        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, suporte: suporteLabel(c), photos: 0 };
+      if (photos > 0) {
+        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
         byVenda[c.venda].photos += photos;
       }
     });
@@ -1287,38 +1184,24 @@ function exportReport() {
   weeks.forEach(w => {
     state.weeks[w].campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
-      const isDone = p.done === true;
-      if (photos > 0 || isDone) {
-        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, suporte: suporteLabel(c), photos: 0 };
+      if (photos > 0) {
+        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
         byVenda[c.venda].photos += photos;
       }
     });
   });
 
-  // Gerar XLSX com SheetJS — sem problemas de encoding ou separadores
-  const rows = [['Nº Venda', 'Campanha', 'Suporte', 'Nº Fotos']];
+  const lines = ['Nº Venda,Campanha,Nº Fotos'];
   Object.entries(byVenda).sort().forEach(([v, d]) => {
-    rows.push([v, d.campanha, d.suporte, d.photos]);
+    lines.push(`"${v}","${d.campanha}",${d.photos}`);
   });
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  // Largura das colunas
-  ws['!cols'] = [{ wch: 14 }, { wch: 50 }, { wch: 20 }, { wch: 10 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Report MOP');
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([wbout], { type: 'application/octet-stream' });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.style.display = 'none';
-  a.href = url;
-  a.download = 'report_mop.xlsx';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = 'report_mop.csv'; a.click();
   showToast('✓ Report exportado');
 }
 
@@ -1327,11 +1210,10 @@ function copyReport() {
   Object.values(state.weeks).forEach(w => {
     w.campaigns.forEach(c => {
       const id = campaignId(c);
-      const p = state.progress[id] || { r: 0, m: 0, ip: 0, done: false };
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
       const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
-      const isDone = p.done === true;
-      if (photos > 0 || isDone) {
-        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, suporte: suporteLabel(c), photos: 0 };
+      if (photos > 0) {
+        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
         byVenda[c.venda].photos += photos;
       }
     });
@@ -1429,26 +1311,32 @@ function handleAnalogFile(file) {
 function processAnalogRows(rows, weekName) {
   const campaigns = [];
   let imported = 0, skipped = 0;
+  let svCounter = 0;
 
-  // Extrair número da semana de weekName (ex: "S12" → 12)
-  const weekNum = parseFloat(weekName.replace(/[^0-9]/g, ''));
+  // Extrair número da semana a partir do nome (ex: "S23" → 23)
+  const weekNum = parseInt(weekName.replace(/\D/g, ''));
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const campanha = String(row[0] || '').trim();   // A = CAMPANHA
-    const formato  = String(row[1] || '').trim();   // B = Formato
-    const semanaRow = parseFloat(String(row[3] || '').trim()); // D = Semana
-    let venda      = String(row[12] || '').trim();  // M = Nº Venda
+    const campanha  = String(row[0] || '').trim();   // A = CAMPANHA
+    const formato   = String(row[1] || '').trim();   // B = Formato
+    const semanaRaw = row[3];                         // D = Semana (número)
+    let   venda     = String(row[12] || '').trim();  // M = Nº Venda
 
     if (!campanha) { skipped++; continue; }
 
-    // Filtrar pela semana selecionada (se o ficheiro tiver coluna D preenchida)
-    if (!isNaN(semanaRow) && !isNaN(weekNum) && semanaRow !== weekNum) {
-      skipped++; continue;
-    }
+    // Filtrar por semana
+    const semana = parseFloat(String(semanaRaw || ''));
+    if (isNaN(semana) || Math.round(semana) !== weekNum) { skipped++; continue; }
 
-    // Se não tem Nº Venda, gera um identificador automático
-    if (!venda) venda = 'SV.' + campanha.substring(0, 8).replace(/[^a-zA-Z0-9]/g, '');
+    // Normalizar referências SV / V. incompleto / N/A → SV1, SV2...
+    const vendaUp = venda.toUpperCase();
+    const isSV = vendaUp === 'SV' || venda === '' ||
+                 vendaUp === 'V.' || vendaUp === 'N/A' || /^falta\s*venda/i.test(venda);
+    if (isSV) {
+      svCounter++;
+      venda = `SV${svCounter}`;
+    }
 
     // Calcular fotos por formato
     const fUp = formato.toUpperCase();
@@ -1489,7 +1377,7 @@ function processAnalogRows(rows, weekName) {
   if (!state.weeks[weekName]) {
     state.weeks[weekName] = { campaigns: [], loaded: new Date().toLocaleDateString('pt') };
   }
-  // Remover analógicos anteriores desta semana e adicionar os novos (mantém progresso em state.progress)
+  // Remover analógicos anteriores desta semana e adicionar os novos
   state.weeks[weekName].campaigns = [
     ...state.weeks[weekName].campaigns.filter(c => c.subtype !== 'analog'),
     ...campaigns
@@ -1530,21 +1418,16 @@ function exportProgress() {
     weeks: state.weeks,
     progress: state.progress,
     activeWeek: state.activeWeek,
-    activeType: state.activeType
-    // mapData não incluído — fica no dispositivo (é muito grande para sincronizar)
+    activeType: state.activeType,
+    mapData: state.mapData || {}
   };
-  const json = JSON.stringify(data, null, 2);
-  const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
-  const blob = new Blob([json], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.style.display = 'none';
+  const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
   a.href = url;
   a.download = `mop_progresso_${date}.json`;
-  document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
   showToast('✓ Progresso exportado');
 }
 
@@ -1554,35 +1437,25 @@ function importProgress(file) {
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
-      if (!data.version || (!data.progress && !data.weeks)) {
+      if (!data.version || !data.progress) {
         showToast('❌ Ficheiro inválido');
         return;
       }
       // Merge — manter semanas locais e sobrescrever progresso
-      if (data.weeks) {
-        // Garantir que cada semana tem estrutura válida
-        Object.keys(data.weeks).forEach(w => {
-          if (!data.weeks[w]) data.weeks[w] = { campaigns: [], loaded: '' };
-          if (!data.weeks[w].campaigns) data.weeks[w].campaigns = [];
-        });
-        state.weeks = { ...state.weeks, ...data.weeks };
-      }
+      if (data.weeks) state.weeks = { ...state.weeks, ...data.weeks };
       if (data.progress) state.progress = { ...state.progress, ...data.progress };
-      if (data.activeWeek && state.weeks[data.activeWeek]) state.activeWeek = data.activeWeek;
+      if (data.activeWeek) state.activeWeek = data.activeWeek;
       if (data.activeType) state.activeType = data.activeType;
-      // mapData não importado — importa o ficheiro de mapa separadamente
+      if (data.mapData) state.mapData = data.mapData;
       saveState();
       renderAll();
       showToast('✓ Progresso importado');
       // Reset input
       document.getElementById('progressInput').value = '';
-    } catch(err) {
-      console.error('Import error:', err);
-      // Tentar com encoding diferente se falhou
-      showToast('❌ Erro ao ler o ficheiro: ' + err.message);
+    } catch(e) {
+      showToast('❌ Erro ao ler o ficheiro');
     }
   };
-  reader.onerror = () => showToast('❌ Erro ao ler o ficheiro');
   reader.readAsText(file);
 }
 
@@ -1701,6 +1574,7 @@ function processMapRows(rows) {
 
 function initLeafletMap() {
   setTimeout(() => {
+    // Destroy existing map instance to avoid "already initialized" error
     if (leafletMap) {
       leafletMap.remove();
       leafletMap = null;
@@ -1708,44 +1582,19 @@ function initLeafletMap() {
     }
     const mapEl = document.getElementById('map');
     if (!mapEl) return;
+    // Force height so Leaflet can measure it
     mapEl.style.height = '420px';
     leafletMap = L.map('map', { zoomControl: true }).setView([38.736, -9.142], 12);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap © CARTO',
-      subdomains: 'abcd', maxZoom: 19
+      subdomains: 'abcd',
+      maxZoom: 19
     }).addTo(leafletMap);
     leafletMap.invalidateSize(true);
-
-    // Obter localização atual
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(pos => {
-        state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        updateUserLocationMarker();
-        const sel = document.getElementById('campaignSelect');
-        if (sel && sel.value) showMapCampaign(sel.value);
-      }, () => {
-        const sel = document.getElementById('campaignSelect');
-        if (sel && sel.value) showMapCampaign(sel.value);
-      });
-    } else {
-      const sel = document.getElementById('campaignSelect');
-      if (sel && sel.value) showMapCampaign(sel.value);
-    }
+    // Show selected campaign if any
+    const sel = document.getElementById('campaignSelect');
+    if (sel && sel.value) showMapCampaign(sel.value);
   }, 300);
-}
-
-var userLocationMarker = null;
-function updateUserLocationMarker() {
-  if (!leafletMap || !state.userLocation) return;
-  if (userLocationMarker) userLocationMarker.remove();
-  const icon = L.divIcon({
-    className: '',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:#ff3b30;border:2px solid #fff;box-shadow:0 0 0 3px rgba(255,59,48,0.25)"></div>`,
-    iconSize: [14, 14], iconAnchor: [7, 7]
-  });
-  userLocationMarker = L.marker([state.userLocation.lat, state.userLocation.lng], { icon })
-    .addTo(leafletMap)
-    .bindPopup('<strong>A tua localização</strong>');
 }
 
 function renderMapView() {
@@ -1782,22 +1631,11 @@ function filterMap() {
 
 function showMapCampaign(name) {
   const campanhas = state.mapData || {};
-  let mupis = [...(campanhas[name] || [])];
+  const mupis = campanhas[name] || [];
   clearMapMarkers();
 
   if (!leafletMap) return;
 
-  // Ordenar por proximidade se tiver localização
-  if (state.userLocation) {
-    const ul = state.userLocation;
-    mupis.sort((a, b) => {
-      const da = Math.pow(a.lat - ul.lat, 2) + Math.pow(a.lng - ul.lng, 2);
-      const db = Math.pow(b.lat - ul.lat, 2) + Math.pow(b.lng - ul.lng, 2);
-      return da - db;
-    });
-  }
-
-  updateUserLocationMarker();
   const bounds = [];
 
   mupis.forEach(m => {
@@ -1810,14 +1648,9 @@ function showMapCampaign(name) {
       fillOpacity: 0.85
     }).addTo(leafletMap);
 
-    let distStr = '';
-    if (state.userLocation) {
-      const d = Math.sqrt(Math.pow(m.lat - state.userLocation.lat, 2) + Math.pow(m.lng - state.userLocation.lng, 2)) * 111;
-      distStr = `<br><span style="color:#0071e3;font-weight:600">${d < 1 ? Math.round(d*1000)+'m' : d.toFixed(1)+'km'} de distância</span>`;
-    }
     marker.bindPopup(`
       <strong>${m.mupi}</strong><br>
-      <span style="color:#86868b">${m.morada}</span>${distStr}
+      <span style="color:#86868b">${m.morada}</span>
     `);
     mapMarkers.push(marker);
     bounds.push([m.lat, m.lng]);
@@ -1836,205 +1669,10 @@ function clearMapMarkers() {
   mapMarkers = [];
 }
 
-// ── NOVA CAMPANHA ─────────────────────────────────────────────
-const NC_FORMATOS = {
-  digital: [
-    { label: 'Ecrãs TV',   subtype: '',         r:2, m:2, ip:2 },
-    { label: 'Ecrãs TV — Só Rua',  subtype: '', r:2, m:0, ip:0 },
-    { label: 'Ecrãs TV — Só Metro',subtype: '', r:0, m:2, ip:0 },
-    { label: 'Ecrãs TV — Sem Rua', subtype: '', r:0, m:2, ip:2 },
-    { label: '3 Ecrãs',    subtype: '',         r:0, m:3, ip:0 },
-    { label: "Led's",      subtype: 'leds',     r:0, m:4, ip:2 },
-    { label: 'Led 4x3',    subtype: '4x3',      r:3, m:0, ip:0 },
-    { label: 'Flagship',   subtype: 'flagship', r:2, m:0, ip:0 },
-    { label: 'Tomi',       subtype: '',         r:0, m:1, ip:0 },
-  ],
-  analog: [
-    { label: 'Mupis',      subtype: 'analog', r:2, m:2, ip:2 },
-    { label: 'PPA',        subtype: 'analog', r:5, m:0, ip:0 },
-    { label: '8x3',        subtype: 'analog', r:3, m:0, ip:0 },
-    { label: 'Paredes Metro', subtype: 'analog', r:0, m:1, ip:0 },
-    { label: 'ATM',        subtype: 'analog', r:2, m:0, ip:0 },
-    { label: '4Plus',      subtype: 'analog', r:0, m:3, ip:0 },
-    { label: 'Transportes',subtype: 'analog', r:4, m:0, ip:0 },
-    { label: 'Flashes',    subtype: 'analog', r:0, m:3, ip:0 },
-    { label: 'Outro',      subtype: 'analog', r:0, m:1, ip:0 },
-  ]
-};
-
-function openNewCampaign() {
-  if (!state.activeWeek) { showToast('Seleciona uma semana primeiro'); return; }
-  const modal = document.getElementById('newCampaignModal');
-  modal.style.display = 'flex';
-  // Reset fields
-  document.getElementById('nc_venda').value = '';
-  document.getElementById('nc_nome').value = '';
-  document.getElementById('nc_notas').value = '';
-  document.getElementById('nc_tipo').value = state.activeType === 'analog' ? 'analog' : 'digital';
-  updateNcFormato();
-}
-
-function closeNewCampaign() {
-  document.getElementById('newCampaignModal').style.display = 'none';
-}
-
-function updateNcFormato() {
-  const tipo = document.getElementById('nc_tipo').value;
-  const sel = document.getElementById('nc_formato');
-  sel.innerHTML = NC_FORMATOS[tipo].map((f, i) =>
-    `<option value="${i}">${f.label}</option>`
-  ).join('');
-  updateNcFotos();
-}
-
-function updateNcFotos() {
-  const tipo = document.getElementById('nc_tipo').value;
-  const idx = parseInt(document.getElementById('nc_formato').value);
-  const f = NC_FORMATOS[tipo][idx];
-  if (!f) return;
-  document.getElementById('nc_r').value = f.r;
-  document.getElementById('nc_m').value = f.m;
-  document.getElementById('nc_ip').value = f.ip;
-}
-
-function saveNewCampaign() {
-  const venda = document.getElementById('nc_venda').value.trim();
-  const nome  = document.getElementById('nc_nome').value.trim();
-  const tipo  = document.getElementById('nc_tipo').value;
-  const fmtIdx = parseInt(document.getElementById('nc_formato').value);
-  const fmt   = NC_FORMATOS[tipo][fmtIdx];
-  const r     = parseInt(document.getElementById('nc_r').value) || 0;
-  const m     = parseInt(document.getElementById('nc_m').value) || 0;
-  const ip    = parseInt(document.getElementById('nc_ip').value) || 0;
-  const notas = document.getElementById('nc_notas').value.trim();
-
-  if (!venda) { showToast('❌ Preenche o Nº Venda'); return; }
-  if (!nome)  { showToast('❌ Preenche o nome da campanha'); return; }
-
-  const campaign = {
-    venda, campanha: nome,
-    suporte: fmt.label,
-    subtype: fmt.subtype,
-    notas, r, m, ip,
-    manual: true  // flag para identificar campanhas manuais
-  };
-
-  if (!state.weeks[state.activeWeek]) {
-    state.weeks[state.activeWeek] = { campaigns: [], loaded: new Date().toLocaleDateString('pt') };
-  }
-  state.weeks[state.activeWeek].campaigns.push(campaign);
-  saveState();
-  closeNewCampaign();
-  // Mudar para o tipo correto para ver a nova campanha
-  const typeBtn = document.querySelector(`.type-btn[data-type="${tipo}"]`);
-  if (typeBtn) setType(tipo, typeBtn);
-  renderCards();
-  renderHome();
-  showToast(`✓ Campanha "${nome}" adicionada`);
-}
-
-// Fechar modal ao clicar fora
-document.addEventListener('click', e => {
-  const modal = document.getElementById('newCampaignModal');
-  if (modal && e.target === modal) closeNewCampaign();
-});
-
 // ── INIT ───────────────────────────────────────────────────────
 loadState();
 renderAll();
 initDropZone();
-window.addEventListener('scroll', () => {
-  const btn = document.getElementById('backToTop');
-  if (btn) btn.classList.toggle('visible', window.scrollY > 200);
-});
 </script>
-  <!-- MODAL NOVA CAMPANHA -->
-  <div id="newCampaignModal" style="
-    display:none; position:fixed; inset:0; z-index:2000;
-    background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);
-    align-items:flex-end; justify-content:center;">
-    <div style="
-      background:var(--surface); border-radius:20px 20px 0 0;
-      padding:20px 20px 40px; width:100%; max-width:680px;
-      box-shadow:0 -4px 24px rgba(0,0,0,0.15);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
-        <div style="font-size:17px; font-weight:700;">Nova Campanha</div>
-        <button onclick="closeNewCampaign()" style="background:var(--surface2); border:none; border-radius:50%; width:28px; height:28px; font-size:16px; cursor:pointer; color:var(--muted);">✕</button>
-      </div>
-
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">Nº VENDA</label>
-          <input id="nc_venda" type="text" placeholder="ex: V.1234/26"
-            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
-            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
-            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
-        </div>
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">NOME DA CAMPANHA</label>
-          <input id="nc_nome" type="text" placeholder="ex: Nike_Primavera"
-            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
-            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
-            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
-        </div>
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">TIPO</label>
-          <select id="nc_tipo" onchange="updateNcFormato()"
-            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
-            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
-            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
-            <option value="digital">Digital</option>
-            <option value="analog">Analógico</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">FORMATO</label>
-          <select id="nc_formato" onchange="updateNcFotos()"
-            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
-            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
-            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
-          </select>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">RUA</label>
-            <input id="nc_r" type="number" min="0" max="9" value="0"
-              style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
-              border-radius:var(--radius-sm); font-size:15px; text-align:center;
-              background:var(--surface); color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">METRO</label>
-            <input id="nc_m" type="number" min="0" max="9" value="0"
-              style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
-              border-radius:var(--radius-sm); font-size:15px; text-align:center;
-              background:var(--surface); color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
-          </div>
-          <div>
-            <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">IP</label>
-            <input id="nc_ip" type="number" min="0" max="9" value="0"
-              style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
-              border-radius:var(--radius-sm); font-size:15px; text-align:center;
-              background:var(--surface); color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
-          </div>
-        </div>
-        <div>
-          <label style="font-size:12px; font-weight:600; color:var(--muted); display:block; margin-bottom:4px;">NOTAS (opcional)</label>
-          <input id="nc_notas" type="text" placeholder="ex: Só Rua"
-            style="width:100%; padding:10px 12px; border:1.5px solid var(--border);
-            border-radius:var(--radius-sm); font-size:15px; background:var(--surface);
-            color:var(--text); font-family:-apple-system,sans-serif; outline:none;">
-        </div>
-        <button onclick="saveNewCampaign()" style="
-          background:var(--accent); color:#fff; border:none;
-          border-radius:var(--radius-sm); padding:14px;
-          font-size:15px; font-weight:700; cursor:pointer; margin-top:4px;">
-          Adicionar Campanha
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 </body>
 </html>
