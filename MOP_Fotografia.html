@@ -374,6 +374,32 @@
     border:1px solid #c0d8f5; font-size:13px; font-weight:600;
     cursor:pointer; margin-bottom:12px;
   }
+
+  /* ── WEEK MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: var(--surface); border-radius: var(--radius) var(--radius) 0 0;
+    padding: 24px 20px 36px; width: 100%; max-width: 480px;
+    transform: translateY(100%); transition: transform 0.3s ease;
+  }
+  .modal-overlay.show .modal-box { transform: translateY(0); }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .modal-input {
+    width: 100%; padding: 13px 14px; font-size: 20px; font-weight: 700;
+    text-align: center; letter-spacing: 0.05em;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text);
+    outline: none; margin-bottom: 16px;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-btns { display: flex; gap: 10px; }
 </style>
 </head>
 <body>
@@ -561,6 +587,21 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- WEEK MODAL -->
+<div class="modal-overlay" id="weekModal">
+  <div class="modal-box">
+    <div class="modal-title">Número da semana</div>
+    <div class="modal-sub">Introduz o número da semana (1 a 52)</div>
+    <input class="modal-input" type="number" id="weekModalInput"
+           min="1" max="52" placeholder="23"
+           onkeydown="if(event.key==='Enter') confirmWeekModal()">
+    <div class="modal-btns">
+      <button class="btn btn-ghost" style="flex:1" onclick="cancelWeekModal()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="confirmWeekModal()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 var leafletMap = null;
 var mapMarkers = [];
@@ -610,31 +651,49 @@ function initDropZone() {
 
 function handleFile(file) {
   if (!file) return;
-  const week = askWeek();
-  if (!week) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      processRows(rows, week);
-    } catch(err) {
-      showToast('❌ Erro ao ler o ficheiro');
-    }
-  };
-  reader.readAsArrayBuffer(file);
+  askWeek(week => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        processRows(rows, week);
+      } catch(err) {
+        showToast('❌ Erro ao ler o ficheiro');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
 }
 
-function askWeek() {
-  const week = prompt('Qual é o número da semana? (1 a 52)\nEx: 11 para a semana 11');
-  if (!week) return null;
-  const num = parseInt(week.trim());
+var _weekModalCallback = null;
+
+function askWeek(callback) {
+  _weekModalCallback = callback;
+  const modal = document.getElementById('weekModal');
+  const input = document.getElementById('weekModalInput');
+  input.value = '';
+  modal.classList.add('show');
+  setTimeout(() => input.focus(), 300);
+}
+
+function confirmWeekModal() {
+  const input = document.getElementById('weekModalInput');
+  const num = parseInt(input.value.trim());
   if (isNaN(num) || num < 1 || num > 52) {
     showToast('❌ Semana inválida — usa um número de 1 a 52');
-    return null;
+    input.focus();
+    return;
   }
-  return `S${num}`;
+  document.getElementById('weekModal').classList.remove('show');
+  if (_weekModalCallback) _weekModalCallback(`S${num}`);
+  _weekModalCallback = null;
+}
+
+function cancelWeekModal() {
+  document.getElementById('weekModal').classList.remove('show');
+  _weekModalCallback = null;
 }
 
 function processRows(rows, weekName) {
@@ -1211,8 +1270,7 @@ function exportTimestamps() {
     rows.push([t.ts, `"${t.campanha}"`, `"${t.suporte}"`, t.subtype || '', localLabel]);
   });
 
-  const csv = rows.map(r => r.join(',')).join('
-');
+  const csv = rows.map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1412,20 +1470,20 @@ function showToast(msg) {
 // ── ANALOG IMPORT ─────────────────────────────────────────────
 function handleAnalogFile(file) {
   if (!file) return;
-  const week = askWeek();
-  if (!week) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      processAnalogRows(rows, week);
-    } catch(err) {
-      showToast('❌ Erro ao ler o ficheiro');
-    }
-  };
-  reader.readAsArrayBuffer(file);
+  askWeek(week => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        processAnalogRows(rows, week);
+      } catch(err) {
+        showToast('❌ Erro ao ler o ficheiro');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 function processAnalogRows(rows, weekName) {
