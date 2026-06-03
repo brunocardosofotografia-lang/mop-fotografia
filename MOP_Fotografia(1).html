@@ -679,10 +679,11 @@ function processRows(rows, weekName) {
       r = 3;
     } else if (fmtUp.includes("LED") && (fmtUp.includes("LED'S") || fmtUp.includes('LEDS') || colG.toLowerCase().includes("led's"))) {
       // Ecrãs Led's — distinguir Flagship / 4x3 / normal
-      if (redeUp.toUpperCase().includes('FLAGSHIP')) {
+      const redeNorm = colD.toUpperCase().replace(/\s/g,'');
+      if (redeNorm.includes('FLAGSHIP') || redeNorm.includes('FLASG')) {
         // Flagship → 2 fotos rua
         r = 2; subtype = 'flagship';
-      } else if (redeUp.toUpperCase().includes('4X3')) {
+      } else if (redeNorm.includes('4X3') || redeNorm.includes('LED4X3') || colD.toLowerCase().includes('4x3')) {
         // Led 4x3 → 3 fotos rua
         r = 3; subtype = '4x3';
       } else {
