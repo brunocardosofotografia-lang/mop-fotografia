@@ -581,7 +581,7 @@ function saveState() {
 
 // ── CAMPAIGN ID ────────────────────────────────────────────────
 function campaignId(c) {
-  return `${c.venda}_${c.suporte}`.replace(/[^a-zA-Z0-9_]/g, '_');
+  return `${c.venda}_${c.suporte}_${c.rede || ''}`.replace(/[^a-zA-Z0-9_]/g, '_');
 }
 
 // ── FILE IMPORT ────────────────────────────────────────────────
@@ -710,7 +710,7 @@ function processRows(rows, weekName) {
     const notas = (colK && !colK.toUpperCase().includes('CONTINUA') &&
                    !colK.toUpperCase().includes('BRANDSTORE')) ? colK : '';
 
-    campaigns.push({ venda: colA, campanha: colI, suporte: colG, subtype, notas, r, m, ip });
+    campaigns.push({ venda: colA, campanha: colI, suporte: colG, rede: colD, subtype, notas, r, m, ip });
     imported++;
   }
 
@@ -1034,6 +1034,7 @@ function renderCards() {
           </div>
         </div>
         ${counters.length ? `<div class="card-photos">${counters.join('')}</div>` : ''}
+        ${c.rede ? `<div class="card-notes" style="color:var(--muted)">📍 ${c.rede}</div>` : ''}
         ${c.notas ? `<div class="card-notes">📌 ${c.notas}</div>` : ''}
       </div>
     `;
