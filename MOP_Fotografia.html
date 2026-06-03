@@ -754,7 +754,7 @@ function renderAll() {
   // Sync toggle AFTER DOM is updated
   setTimeout(syncTypeToggle, 0);
 
-  const hasData = Object.keys(state.weeks).length > 0;
+  const hasData = Object.keys(state.weeks).filter(w => !state.weeks[w].archived).length > 0;
   document.getElementById('homeEmpty').style.display = hasData ? 'none' : 'block';
   document.getElementById('homeContent').style.display = hasData ? 'block' : 'none';
   document.getElementById('fieldEmpty').style.display = hasData ? 'none' : 'block';
@@ -843,9 +843,11 @@ function renderHome() {
 
 // ── WEEK SELECTOR ──────────────────────────────────────────────
 function renderWeekSelector() {
-  const weeks = Object.keys(state.weeks);
+  const weeks = Object.keys(state.weeks).filter(w => !state.weeks[w].archived);
   if (!weeks.length) return;
-  if (!state.activeWeek) state.activeWeek = weeks[0];
+  if (!state.activeWeek || state.weeks[state.activeWeek]?.archived) {
+    state.activeWeek = weeks[0];
+  }
 
   const el = document.getElementById('weekSelector');
   el.innerHTML = weeks.map(w => `
@@ -1036,6 +1038,9 @@ function renderCards() {
         ${counters.length ? `<div class="card-photos">${counters.join('')}</div>` : ''}
         ${c.rede ? `<div class="card-notes" style="color:var(--muted)">📍 ${c.rede}</div>` : ''}
         ${c.notas ? `<div class="card-notes">📌 ${c.notas}</div>` : ''}
+        <div style="padding:0 16px 10px 49px;">
+          <button onclick="deleteCampaign(event,'${id}')" style="font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:0; font-weight:500;">🗑 Apagar campanha</button>
+        </div>
       </div>
     `;
   }).join('');
@@ -1099,6 +1104,21 @@ function toggleDone(e, id, r, m, ip) {
 
 function toggleCard(id, r, m, ip) {
   // Just visual expand — handled by the counters
+}
+
+function deleteCampaign(e, id) {
+  e.stopPropagation();
+  if (!confirm('Apagar esta campanha?')) return;
+  // Remove from the active week
+  if (state.activeWeek && state.weeks[state.activeWeek]) {
+    state.weeks[state.activeWeek].campaigns =
+      state.weeks[state.activeWeek].campaigns.filter(c => campaignId(c) !== id);
+  }
+  // Remove progress
+  delete state.progress[id];
+  saveState();
+  renderAll();
+  showToast('Campanha apagada');
 }
 
 function updateCardDone(id) {
@@ -1234,27 +1254,47 @@ function renderLoadedWeeks() {
     el.innerHTML = '<div style="font-size:13px; color:var(--muted)">Nenhuma semana carregada</div>';
     return;
   }
-  el.innerHTML = weeks.map(w => `
-    <div class="week-item">
+  el.innerHTML = weeks.map(w => {
+    const isArchived = state.weeks[w].archived;
+    return `
+    <div class="week-item" style="${isArchived ? 'opacity:0.5' : ''}">
       <div>
-        <div class="week-name">${w}</div>
+        <div class="week-name">${w} ${isArchived ? '<span style="font-size:10px;color:var(--muted);font-weight:400">(arquivada)</span>' : ''}</div>
         <div class="week-stats">Carregado: ${state.weeks[w].loaded} · ${state.weeks[w].campaigns.length} campanhas</div>
       </div>
-      <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;"
-              onclick="removeWeek('${w}')">✕</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;"
+                onclick="toggleArchiveWeek('${w}')">${isArchived ? '↩ Restaurar' : '📦 Arquivar'}</button>
+        <button class="btn btn-danger" style="padding:4px 10px; font-size:11px;"
+                onclick="removeWeek('${w}')">🗑</button>
+      </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function removeWeek(w) {
+  if (!confirm(`Apagar a semana ${w}? Esta ação não pode ser revertida.`)) return;
   delete state.weeks[w];
   if (state.activeWeek === w) {
-    const remaining = Object.keys(state.weeks);
-    state.activeWeek = remaining.length ? remaining[0] : null;
+    const remaining = Object.keys(state.weeks).filter(k => !state.weeks[k]?.archived);
+    state.activeWeek = remaining.length ? remaining[0] : Object.keys(state.weeks)[0] || null;
   }
   saveState();
   renderAll();
   showToast(`${w} removida`);
+}
+
+function toggleArchiveWeek(w) {
+  if (!state.weeks[w]) return;
+  state.weeks[w].archived = !state.weeks[w].archived;
+  // If archiving the active week, switch to a non-archived one
+  if (state.weeks[w].archived && state.activeWeek === w) {
+    const active = Object.keys(state.weeks).find(k => !state.weeks[k].archived);
+    state.activeWeek = active || w;
+  }
+  saveState();
+  renderAll();
+  showToast(state.weeks[w].archived ? `${w} arquivada` : `${w} restaurada`);
 }
 
 function clearAllData() {
