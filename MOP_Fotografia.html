@@ -367,6 +367,19 @@
     font-family: -apple-system, sans-serif !important;
   }
   .leaflet-popup-content { font-size: 13px; line-height: 1.5; margin: 10px 14px; }
+  /* ── SCROLL TO TOP ── */
+  .scroll-top {
+    position: fixed; bottom: 24px; right: 20px; z-index: 200;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+    font-size: 16px; color: var(--text2);
+  }
+  .scroll-top.visible { opacity: 1; pointer-events: all; }
+
   .map-import-btn {
     display:inline-flex; align-items:center; gap:6px;
     padding:8px 14px; border-radius:var(--radius-sm);
@@ -586,6 +599,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
 <!-- WEEK MODAL -->
 <div class="modal-overlay" id="weekModal">
@@ -1851,6 +1865,11 @@ function clearMapMarkers() {
 loadState();
 renderAll();
 initDropZone();
+
+// Scroll to top button
+window.addEventListener('scroll', () => {
+  document.getElementById('scrollTop').classList.toggle('visible', window.scrollY > 200);
+}, { passive: true });
 </script>
 </body>
 </html>
