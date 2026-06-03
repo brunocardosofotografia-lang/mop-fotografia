@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MOP · Fotografia</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --surface2: #f0f0f2;
+    --border: #e0e0e5;
+    --border-light: #ebebef;
+    --text: #1d1d1f;
+    --text2: #3a3a3c;
+    --muted: #86868b;
+    --accent: #0071e3;
+    --accent-light: #e8f1fb;
+    --green: #34c759;
+    --green-light: #e9f9ed;
+    --orange: #ff9500;
+    --orange-light: #fff4e5;
+    --red: #ff3b30;
+    --purple: #af52de;
+    --purple-light: #f5eafc;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(245,245,247,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo {
+    font-size: 17px; font-weight: 600; color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .logo span { color: var(--accent); }
+  .week-badge {
+    font-size: 12px; font-weight: 500;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); padding: 4px 12px; border-radius: 20px;
+  }
+
+  /* ── NAV TABS ── */
+  nav {
+    display: flex; border-bottom: 1px solid var(--border);
+    background: rgba(245,245,247,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: sticky; top: 49px; z-index: 99;
+  }
+  nav button {
+    flex: 1; padding: 11px 4px; border: none; background: transparent;
+    color: var(--muted); font-size: 12px; font-weight: 500;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all 0.2s; letter-spacing: 0.01em;
+  }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── VIEWS ── */
+  .view { display: none; padding: 16px 16px 32px; max-width: 680px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  /* ── IMPORT VIEW ── */
+  .drop-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius); padding: 44px 24px;
+    text-align: center; cursor: pointer;
+    transition: all 0.2s; margin-bottom: 16px;
+    background: var(--surface);
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent); background: var(--accent-light);
+  }
+  .drop-icon { font-size: 32px; margin-bottom: 10px; }
+  .drop-title { font-size: 15px; font-weight: 600; margin-bottom: 5px; color: var(--text); }
+  .drop-sub { font-size: 13px; color: var(--muted); }
+  #fileInput { display: none; }
+
+  .import-stats {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 4px 16px; margin-bottom: 14px; display: none;
+    box-shadow: var(--shadow);
+  }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
+  .stat-row + .stat-row { border-top: 1px solid var(--border-light); }
+  .stat-label { font-size: 14px; color: var(--text2); }
+  .stat-value { font-size: 14px; font-weight: 600; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+
+  /* ── FIELD VIEW ── */
+  .filter-bar {
+    display: flex; gap: 7px; margin-bottom: 14px; overflow-x: auto;
+    padding-bottom: 2px; scrollbar-width: none;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .filter-btn {
+    white-space: nowrap; padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); font-size: 12px; cursor: pointer;
+    font-weight: 500; transition: all 0.18s;
+    box-shadow: var(--shadow);
+  }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .progress-bar-wrap {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 13px 16px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--shadow);
+  }
+  .progress-bar-bg {
+    flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; background: var(--green); border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .progress-text { font-size: 12px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+
+  /* ── CAMPAIGN CARD ── */
+  .card {
+    background: var(--surface); border-radius: var(--radius);
+    margin-bottom: 8px; overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: opacity 0.2s;
+  }
+  .card.done { opacity: 0.45; }
+
+  .card-header {
+    padding: 13px 16px; display: flex; align-items: flex-start;
+    gap: 11px; cursor: pointer;
+  }
+  .card-check {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid var(--border); background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; cursor: pointer; transition: all 0.2s; margin-top: 1px;
+  }
+  .card.done .card-check { background: var(--green); border-color: var(--green); }
+  .card-check-icon { font-size: 11px; color: #fff; display: none; }
+  .card.done .card-check-icon { display: block; }
+
+  .card-info { flex: 1; min-width: 0; }
+  .card-name { font-size: 14px; font-weight: 600; margin-bottom: 5px; line-height: 1.3; color: var(--text); }
+  .card-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag {
+    font-size: 11px; font-weight: 500;
+    padding: 2px 8px; border-radius: 5px;
+    background: var(--surface2); color: var(--muted);
+    white-space: nowrap;
+  }
+  .tag.rua  { background: #e8f1fb; color: var(--accent); }
+  .tag.metro { background: var(--purple-light); color: var(--purple); }
+  .tag.ip   { background: var(--orange-light); color: var(--orange); }
+
+  .card-photos {
+    padding: 0 16px 13px 49px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+
+  .photo-counter {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border-radius: var(--radius-sm);
+    padding: 7px 11px;
+  }
+  .photo-type { font-size: 11px; color: var(--muted); font-weight: 600; min-width: 26px; }
+  .counter-controls { display: flex; align-items: center; }
+  .counter-btn {
+    width: 28px; height: 28px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text2);
+    font-size: 16px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+  .counter-btn:first-child { border-radius: 6px 0 0 6px; }
+  .counter-btn:last-child { border-radius: 0 6px 6px 0; }
+  .counter-btn:active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .counter-val {
+    width: 34px; height: 28px;
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    background: var(--surface); display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; color: var(--text2);
+  }
+  .counter-val.done { color: var(--green); }
+  .counter-total { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+  .card-notes {
+    padding: 0 16px 12px 49px;
+    font-size: 12px; color: var(--orange); font-weight: 500;
+  }
+
+  /* ── HOME VIEW ── */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .summary-card {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 16px; box-shadow: var(--shadow);
+  }
+  .summary-num { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 3px; }
+  .summary-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  .section-title {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 10px; margin-top: 4px;
+  }
+
+  .week-item {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: var(--shadow);
+  }
+  .week-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .week-stats { font-size: 12px; color: var(--muted); }
+
+  /* ── REPORT VIEW ── */
+  .report-header {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow);
+  }
+  .report-title { font-size: 16px; font-weight: 700; margin-bottom: 3px; letter-spacing: -0.01em; }
+  .report-sub { font-size: 13px; color: var(--muted); }
+
+  .report-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .report-table th {
+    font-size: 11px; color: var(--muted); font-weight: 600;
+    text-align: left; padding: 8px 12px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .report-table td { padding: 11px 12px; font-size: 13px; color: var(--text2); }
+  .report-table tr { background: var(--surface); box-shadow: var(--shadow); }
+  .report-table tr td:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .report-table tr td:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .report-table tbody tr + tr td { border-top: 1px solid var(--border-light); }
+  .report-table .num { font-weight: 700; color: var(--accent); text-align: right; font-size: 14px; }
+  .report-table-wrap { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 12px; }
+  .report-table-wrap .report-table th { border-bottom: 1px solid var(--border-light); }
+  .report-table-wrap .report-table td { border-top: none; }
+  .report-table-wrap .report-table tbody tr + tr td { border-top: 1px solid var(--border-light); }
+
+  .report-total {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 14px 16px; box-shadow: var(--shadow);
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .report-total-label { font-size: 14px; font-weight: 600; }
+  .report-total-num { font-size: 24px; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 18px; border-radius: var(--radius-sm); border: none;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.18s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:active { background: #0062c4; }
+  .btn-ghost {
+    background: var(--surface2); color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:active { background: var(--border); }
+  .btn-danger { background: #fff0ef; color: var(--red); border: 1px solid #ffd5d3; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 56px 20px; color: var(--muted); }
+  .empty-icon { font-size: 38px; margin-bottom: 10px; }
+  .empty-text { font-size: 14px; font-weight: 500; }
+
+  /* ── UPLOAD SUCCESS ── */
+  .upload-success {
+    background: var(--green-light); border: 1px solid #b8f0c8;
+    border-radius: var(--radius); padding: 11px 16px; margin-bottom: 14px;
+    font-size: 13px; color: #1a7a35; font-weight: 500; display: none;
+  }
+
+  /* ── SEARCH ── */
+  .search-wrap { position: relative; margin-bottom: 12px; }
+  .search-wrap input {
+    width: 100%; padding: 10px 14px 10px 38px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); font-size: 14px;
+    outline: none; transition: border-color 0.2s; box-shadow: var(--shadow);
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    background: rgba(29,29,31,0.88); backdrop-filter: blur(12px);
+    border-radius: 20px; padding: 10px 20px; font-size: 13px; font-weight: 500;
+    color: #fff; z-index: 999; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ── TYPE TOGGLE ── */
+  .type-toggle {
+    display: flex; background: var(--surface2); border-radius: 10px;
+    padding: 3px; margin-bottom: 12px; gap: 3px;
+  }
+  .type-btn {
+    flex: 1; padding: 8px; border: none; border-radius: 8px;
+    background: transparent; color: var(--muted);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .type-btn.active {
+    background: var(--surface); color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+
+  /* ── WEEK SELECTOR ── */
+  .week-selector {
+    display: flex; gap: 7px; margin-bottom: 14px; overflow-x: auto;
+    padding-bottom: 2px; scrollbar-width: none;
+  }
+  .week-selector::-webkit-scrollbar { display: none; }
+  .week-btn {
+    padding: 6px 16px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); font-size: 12px; cursor: pointer;
+    font-weight: 500; transition: all 0.18s; white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+  .week-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .week-btn.has-data { color: var(--text2); }
+
+  #map { z-index: 1; }
+  .leaflet-popup-content-wrapper {
+    border-radius: 10px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+    font-family: -apple-system, sans-serif !important;
+  }
+  .leaflet-popup-content { font-size: 13px; line-height: 1.5; margin: 10px 14px; }
+  .map-import-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 14px; border-radius:var(--radius-sm);
+    background:var(--accent-light); color:var(--accent);
+    border:1px solid #c0d8f5; font-size:13px; font-weight:600;
+    cursor:pointer; margin-bottom:12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">MOP<span> · </span>Foto</div>
+  <div class="week-badge" id="currentWeekBadge">sem dados</div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" style="padding:6px 14px; font-size:12px;" onclick="exportReport()">↓ Report</button>
+    <button class="btn btn-ghost" style="padding:6px 14px; font-size:12px;" onclick="exportProgress()">☁︎ Guardar</button>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="switchTab('home')">Resumo</button>
+  <button onclick="switchTab('field')">Em Campo</button>
+  <button onclick="switchTab('import')">Importar</button>
+  <button onclick="switchTab('report')">Report</button>
+  <button onclick="switchTab('map')">Mapa</button>
+</nav>
+
+<!-- MAP -->
+<div class="view" id="view-map">
+  <div id="mapEmpty" class="empty">
+    <div class="empty-icon">🗺️</div>
+    <div class="empty-text">Importa o ficheiro de distribuição de Mupis para ver o mapa</div>
+  </div>
+  <div id="mapContent" style="display:none">
+    <div style="margin-bottom:12px;">
+      <select id="campaignSelect" onchange="filterMap()"
+        style="width:100%; padding:10px 14px; background:var(--surface);
+               border:1px solid var(--border); border-radius:var(--radius-sm);
+               color:var(--text); font-size:14px; font-family:-apple-system,sans-serif;
+               outline:none; box-shadow:var(--shadow);">
+        <option value="">Seleciona uma campanha...</option>
+      </select>
+    </div>
+    <div style="background:var(--surface); border-radius:var(--radius);
+                box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px;">
+      <div id="map" style="height:420px; width:100%;"></div>
+    </div>
+    <div id="mapStats" style="background:var(--surface); border-radius:var(--radius);
+         padding:13px 16px; box-shadow:var(--shadow); font-size:13px; color:var(--muted);">
+      Seleciona uma campanha para ver os Mupis no mapa
+    </div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div class="view active" id="view-home">
+  <div id="homeEmpty" class="empty">
+    <div class="empty-icon">📷</div>
+    <div class="empty-text">Importa o Excel da MOP para começar</div>
+  </div>
+  <div id="homeContent" style="display:none">
+    <div class="home-header">
+      <div class="home-title" id="homeTitle">Semana atual</div>
+      <div class="home-sub" id="homeSub"></div>
+    </div>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div id="weekList"></div>
+  </div>
+</div>
+
+<!-- FIELD -->
+<div class="view" id="view-field">
+  <div id="fieldEmpty" class="empty">
+    <div class="empty-icon">🗺️</div>
+    <div class="empty-text">Importa o Excel da MOP para ver as campanhas</div>
+  </div>
+  <div id="fieldContent" style="display:none">
+    <div class="week-selector" id="weekSelector"></div>
+    <div class="type-toggle" id="typeToggle">
+      <button class="type-btn active" data-type="digital" onclick="setType('digital', this)">Digitais</button>
+      <button class="type-btn" data-type="analog" onclick="setType('analog', this)">Analógicos</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Pesquisar campanha..." oninput="renderCards()">
+    </div>
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-btn active" onclick="setFilter('all', this)">Todas</button>
+      <button class="filter-btn" onclick="setFilter('pending', this)">Por fazer</button>
+      <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
+      <button class="filter-btn" onclick="setFilter('tv', this)">Ecrãs TV</button>
+      <button class="filter-btn" onclick="setFilter('leds', this)">Led's</button>
+      <button class="filter-btn" onclick="setFilter('4x3', this)">Led 4x3</button>
+      <button class="filter-btn" onclick="setFilter('flagship', this)">Flagship</button>
+      <button class="filter-btn" onclick="setFilter('tomi', this)">Tomi</button>
+      <button class="filter-btn" onclick="setFilter('analog', this)">Analógicos</button>
+      <button class="filter-btn" onclick="setFilter('3ecras', this)">3 Ecrãs</button>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-text" id="progressText">0 / 0</div>
+    </div>
+    <div id="cardList"></div>
+  </div>
+</div>
+
+<!-- IMPORT -->
+<div class="view" id="view-import">
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px;">
+    <div class="drop-zone" style="margin-bottom:0" onclick="document.getElementById('fileInput').click()">
+      <div class="drop-icon">📱</div>
+      <div class="drop-title">Digitais</div>
+      <div class="drop-sub">Excel semanal da MOP</div>
+    </div>
+    <div class="drop-zone" style="margin-bottom:0" onclick="document.getElementById('analogFileInput').click()">
+      <div class="drop-icon">🖼️</div>
+      <div class="drop-title">Analógicos</div>
+      <div class="drop-sub">Smartsheet da MOP</div>
+    </div>
+    <div class="drop-zone" style="margin-bottom:0" onclick="document.getElementById('mapFileInput').click()">
+      <div class="drop-icon">📍</div>
+      <div class="drop-title">Mupis</div>
+      <div class="drop-sub">Distribuição semanal</div>
+    </div>
+  </div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+  <input type="file" id="analogFileInput" accept=".xlsx,.xls" onchange="handleAnalogFile(this.files[0])" style="display:none">
+<input type="file" id="mapFileInput" accept=".xlsx,.xls" onchange="handleMapFile(this.files[0])" style="display:none">
+<input type="file" id="progressInput" accept=".json" onchange="importProgress(this.files[0])" style="display:none">
+
+  <div class="upload-success" id="uploadSuccess"></div>
+  <div class="import-stats" id="importStats"></div>
+
+  <div style="margin-bottom: 16px;">
+    <div style="font-size:13px; color:var(--muted); margin-bottom:10px; font-weight:500;">SEMANAS CARREGADAS</div>
+    <div id="loadedWeeks"></div>
+  </div>
+
+  <div class="btn-row">
+    <div style="font-size:13px; color:var(--muted); margin-bottom:10px; font-weight:500;">SINCRONIZAÇÃO</div>
+  <div style="background:var(--surface); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); margin-bottom:16px;">
+    <div style="font-size:13px; color:var(--text2); margin-bottom:12px; line-height:1.5;">
+      Guarda o progresso num ficheiro JSON e carrega-o noutro dispositivo para sincronizar.
+    </div>
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn btn-primary" onclick="exportProgress()">↑ Exportar progresso</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('progressInput').click()">↓ Importar progresso</button>
+    </div>
+  </div>
+  <div style="font-size:13px; color:var(--muted); margin-bottom:10px; font-weight:500;">DADOS</div>
+  <button class="btn btn-danger" onclick="clearAllData()" style="font-size:12px;">🗑 Limpar todos os dados</button>
+  </div>
+</div>
+
+<!-- REPORT -->
+<div class="view" id="view-report">
+  <div id="reportEmpty" class="empty">
+    <div class="empty-icon">📊</div>
+    <div class="empty-text">Sem dados para gerar report</div>
+  </div>
+  <div id="reportContent" style="display:none">
+    <div class="report-header">
+      <div class="report-title">Report Fotográfico Mensal</div>
+      <div class="report-sub" id="reportSub"></div>
+    </div>
+    <div class="report-table-wrap"><table class="report-table" id="reportTable">
+      <thead>
+        <tr>
+          <th>Nº Venda</th>
+          <th>Campanha</th>
+          <th style="text-align:right">Fotos</th>
+        </tr>
+      </thead>
+      <tbody id="reportBody"></tbody>
+    </table></div>
+    <div class="report-total">
+      <div class="report-total-label">Total de fotos</div>
+      <div class="report-total-num" id="reportTotal">0</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="exportReport()">↓ Exportar CSV</button>
+      <button class="btn btn-ghost" onclick="copyReport()">⎘ Copiar texto</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var leafletMap = null;
+var mapMarkers = [];
+
+// ── STATE ──────────────────────────────────────────────────────
+var state = {
+  weeks: {},      // { 'W1': { campaigns: [], loaded: Date } }
+  progress: {},   // { 'campaignId': { r: 0, m: 0, ip: 0, done: false } }
+  activeWeek: null,
+  activeFilter: 'all',
+  activeType: 'digital',
+  mapData: {},
+  currentTab: 'home'
+};
+
+const STORAGE_KEY = 'mop_foto_v1';
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) state = JSON.parse(saved);
+  } catch(e) {}
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+// ── CAMPAIGN ID ────────────────────────────────────────────────
+function campaignId(c) {
+  return `${c.venda}_${c.suporte}`.replace(/[^a-zA-Z0-9_]/g, '_');
+}
+
+// ── FILE IMPORT ────────────────────────────────────────────────
+function initDropZone() {
+  const dropZone = document.getElementById('dropZone');
+  if (!dropZone) return;
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const week = askWeek();
+  if (!week) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      processRows(rows, week);
+    } catch(err) {
+      showToast('❌ Erro ao ler o ficheiro');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function askWeek() {
+  const week = prompt('Qual é o número da semana? (1 a 52)\nEx: 11 para a semana 11');
+  if (!week) return null;
+  const num = parseInt(week.trim());
+  if (isNaN(num) || num < 1 || num > 52) {
+    showToast('❌ Semana inválida — usa um número de 1 a 52');
+    return null;
+  }
+  return `S${num}`;
+}
+
+function processRows(rows, weekName) {
+
+  const campaigns = [];
+  let imported = 0, skipped = 0;
+  let svCounter = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    let   colA = String(row[0] || '').trim();   // Nº REFERÊNCIA
+    const colD = String(row[3] || '').trim();   // REDE/ISOLADO
+    const colG = String(row[6] || '').trim();   // FORMATO
+    const colI = String(row[8] || '').trim();   // CAMPANHA
+    const colJ = String(row[9] || '').trim();   // Lisboa/Nacional/Porto
+    const colK = String(row[10] || '').trim();  // notas/filtros
+
+    // Normalizar V, → V. (vírgula em vez de ponto)
+    if (/^V,/i.test(colA)) colA = 'V.' + colA.slice(2);
+
+    // Valid reference check — aceitar V. V, SV sv e referências vazias com campanha
+    const colAupper = colA.toUpperCase();
+    const isValidRef = colAupper.startsWith('V.') || colAupper === 'SV' || colA === '';
+    // Referência incompleta (V. sem número) ou texto inválido com campanha válida → SV
+    const isIncomplete = colAupper === 'V.' || /^falta\s*venda/i.test(colA);
+
+    if (!isValidRef && !isIncomplete && colA !== '') { skipped++; continue; }
+    if (!colA && !colI) { skipped++; continue; }
+
+    // Ignorar linhas de cabeçalho de distribuição (ex: "Rua:", "Metro:", etc.)
+    const distHeaders = ['RUA:', 'METRO:', 'DISTRIBUIÇ', 'LOCAIS:', 'ESTAÇ'];
+    if (distHeaders.some(d => colI.toUpperCase().startsWith(d))) { skipped++; continue; }
+
+    // Filters
+    if (colJ.toLowerCase().includes('porto'))      { skipped++; continue; }
+    if (colK.toLowerCase().includes('continua'))   { skipped++; continue; }
+    if (colK.toLowerCase().includes('brandstore')) { skipped++; continue; }
+
+    // Atribuir SV1, SV2... a referências em falta ou incompletas
+    if (!colA || colAupper === 'SV' || colAupper === 'V.' || isIncomplete) {
+      svCounter++;
+      colA = `SV${svCounter}`;
+    }
+
+    // Calculate photos
+    let r = 0, m = 0, ip = 0, subtype = '';
+    const fmtUp  = colG.toUpperCase();
+    const redeUp = colD.toUpperCase();
+    const ultUp  = colK.toUpperCase();
+
+    if (fmtUp.includes('4X3')) {
+      // 4x3 — sempre rua, 3 fotos
+      r = 3;
+    } else if (fmtUp.includes("LED") && (fmtUp.includes("LED'S") || fmtUp.includes('LEDS') || colG.toLowerCase().includes("led's"))) {
+      // Ecrãs Led's — distinguir Flagship / 4x3 / normal
+      if (redeUp.toUpperCase().includes('FLAGSHIP')) {
+        // Flagship → 2 fotos rua
+        r = 2; subtype = 'flagship';
+      } else if (redeUp.toUpperCase().includes('4X3')) {
+        // Led 4x3 → 3 fotos rua
+        r = 3; subtype = '4x3';
+      } else {
+        // Led normal → 4 metro + 2 IP
+        m = 4; ip = 2; subtype = 'leds';
+      }
+    } else if (fmtUp.includes('TV')) {
+      // Ecrãs TV — R+M+IP por defeito, salvo exceções na colK
+      const soRua   = ultUp.includes('SÓ RUA')   || ultUp.includes('SO RUA');
+      const soMetro = ultUp.includes('SÓ METRO')  || ultUp.includes('SO METRO');
+      const semRua  = ultUp.includes('SEM') && ultUp.includes('RUA');
+      if      (soRua)   { r = 2; }
+      else if (soMetro) { m = 2; }
+      else if (semRua)  { m = 2; ip = 2; }
+      else              { r = 2; m = 2; ip = 2; }
+    } else if (fmtUp.includes('3') && (fmtUp.includes('ECRÃ') || fmtUp.includes('ECRA'))) {
+      // Digital – 3 ecrãs — igual ao TV
+      r = 2; m = 2; ip = 2;
+    } else if (fmtUp.includes('TOMI') || colG.toLowerCase() === 'tomi') {
+      // Tomi — sempre 1 foto metro
+      m = 1;
+    }
+
+    const notas = (colK && !colK.toUpperCase().includes('CONTINUA') &&
+                   !colK.toUpperCase().includes('BRANDSTORE')) ? colK : '';
+
+    campaigns.push({ venda: colA, campanha: colI, suporte: colG, subtype, notas, r, m, ip });
+    imported++;
+  }
+
+  state.weeks[weekName] = { campaigns, loaded: new Date().toLocaleDateString('pt') };
+  state.activeWeek = weekName;
+  saveState();
+
+  // Show stats
+  document.getElementById('uploadSuccess').style.display = 'block';
+  document.getElementById('uploadSuccess').textContent =
+    `✓ ${weekName} carregada — ${imported} campanhas importadas`;
+
+  const statsEl = document.getElementById('importStats');
+  statsEl.style.display = 'block';
+  statsEl.innerHTML = `
+    <div class="stat-row">
+      <span class="stat-label">Semana</span>
+      <span class="stat-value green">${weekName}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Campanhas importadas</span>
+      <span class="stat-value green">${imported}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Ignoradas (Porto/Cont./Brand.)</span>
+      <span class="stat-value red">${skipped}</span>
+    </div>
+  `;
+
+  renderAll();
+  showToast(`✓ ${imported} campanhas carregadas`);
+}
+
+// ── RENDER ALL ─────────────────────────────────────────────────
+function renderAll() {
+  renderHome();
+  renderWeekSelector();
+  renderCards();  // renderCards calls renderFilterBar which renders the field view
+  renderLoadedWeeks();
+  renderReport();
+  // Sync toggle AFTER DOM is updated
+  setTimeout(syncTypeToggle, 0);
+
+  const hasData = Object.keys(state.weeks).length > 0;
+  document.getElementById('homeEmpty').style.display = hasData ? 'none' : 'block';
+  document.getElementById('homeContent').style.display = hasData ? 'block' : 'none';
+  document.getElementById('fieldEmpty').style.display = hasData ? 'none' : 'block';
+  document.getElementById('fieldContent').style.display = hasData ? 'block' : 'none';
+  document.getElementById('reportEmpty').style.display = hasData ? 'none' : 'block';
+  document.getElementById('reportContent').style.display = hasData ? 'block' : 'none';
+
+  // Update week badge
+  const weeks = Object.keys(state.weeks);
+  if (weeks.length > 0) {
+    document.getElementById('currentWeekBadge').textContent =
+      state.activeWeek || weeks[weeks.length - 1];
+  }
+}
+
+// ── HOME ───────────────────────────────────────────────────────
+function renderHome() {
+  const weeks = Object.keys(state.weeks);
+  if (!weeks.length) return;
+
+  // Total stats across all weeks
+  let totalCampaigns = 0, totalDone = 0, totalPhotos = 0, totalTarget = 0;
+  weeks.forEach(w => {
+    state.weeks[w].campaigns.forEach(c => {
+      const id = campaignId(c);
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip &&
+                   (c.r + c.m + c.ip > 0);
+      totalCampaigns++;
+      if (done) totalDone++;
+      totalPhotos += (p.r || 0) + (p.m || 0) + (p.ip || 0);
+      totalTarget += c.r + c.m + c.ip;
+    });
+  });
+
+  document.getElementById('homeTitle').textContent = 'Progresso mensal';
+  document.getElementById('homeSub').textContent =
+    `${weeks.length} semana(s) · ${totalCampaigns} campanhas`;
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="summary-card">
+      <div class="summary-num">${totalDone}</div>
+      <div class="summary-label">Concluídas</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num">${totalCampaigns - totalDone}</div>
+      <div class="summary-label">Por fazer</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num">${totalPhotos}</div>
+      <div class="summary-label">Fotos tiradas</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num" style="color:var(--accent2)">${totalTarget - totalPhotos}</div>
+      <div class="summary-label">Fotos em falta</div>
+    </div>
+  `;
+
+  // Week breakdown
+  const weekListEl = document.getElementById('weekList');
+  weekListEl.innerHTML = '<div style="font-size:13px; color:var(--muted); margin-bottom:10px; font-weight:500;">POR SEMANA</div>';
+  weeks.forEach(w => {
+    let wDone = 0, wTotal = 0, wPhotos = 0;
+    state.weeks[w].campaigns.forEach(c => {
+      const id = campaignId(c);
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+      wTotal++;
+      if (done) wDone++;
+      wPhotos += (p.r || 0) + (p.m || 0) + (p.ip || 0);
+    });
+    weekListEl.innerHTML += `
+      <div class="week-item">
+        <div>
+          <div class="week-name">${w}</div>
+          <div class="week-stats">${state.weeks[w].loaded}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'DM Mono',monospace; font-size:13px">${wDone}/${wTotal} campanhas</div>
+          <div style="font-family:'DM Mono',monospace; font-size:11px; color:var(--accent)">${wPhotos} fotos</div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+// ── WEEK SELECTOR ──────────────────────────────────────────────
+function renderWeekSelector() {
+  const weeks = Object.keys(state.weeks);
+  if (!weeks.length) return;
+  if (!state.activeWeek) state.activeWeek = weeks[0];
+
+  const el = document.getElementById('weekSelector');
+  el.innerHTML = weeks.map(w => `
+    <button class="week-btn has-data ${w === state.activeWeek ? 'active' : ''}"
+            onclick="selectWeek('${w}')">${w}</button>
+  `).join('');
+}
+
+function selectWeek(w) {
+  state.activeWeek = w;
+  state.activeFilter = 'all';
+  document.getElementById('currentWeekBadge').textContent = w;
+  renderWeekSelector();
+  // Sincronizar toggle visual
+  setTimeout(syncTypeToggle, 0);
+  renderCards();
+  saveState();
+}
+
+// ── FILTER BAR ────────────────────────────────────────────────
+function renderFilterBar() {
+  const bar = document.getElementById('filterBar');
+  const isAnalog = state.activeType === 'analog';
+
+  let btns = `
+    <button class="filter-btn active" onclick="setFilter('all', this)">Todas</button>
+    <button class="filter-btn" onclick="setFilter('pending', this)">Por fazer</button>
+    <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
+  `;
+
+  if (!isAnalog) btns += `
+    <button class="filter-btn" onclick="setFilter('tv', this)">Ecrãs TV</button>
+    <button class="filter-btn" onclick="setFilter('leds', this)">Led's</button>
+    <button class="filter-btn" onclick="setFilter('4x3', this)">Led 4x3</button>
+    <button class="filter-btn" onclick="setFilter('flagship', this)">Flagship</button>
+    <button class="filter-btn" onclick="setFilter('tomi', this)">Tomi</button>
+    <button class="filter-btn" onclick="setFilter('3ecras', this)">3 Ecrãs</button>
+  `;
+
+  if (isAnalog) btns += `
+    <button class="filter-btn" onclick="setFilter('mupis', this)">Mupis</button>
+    <button class="filter-btn" onclick="setFilter('ppa', this)">PPA</button>
+    <button class="filter-btn" onclick="setFilter('8x3', this)">8x3</button>
+    <button class="filter-btn" onclick="setFilter('paredes', this)">Paredes</button>
+    <button class="filter-btn" onclick="setFilter('atm', this)">ATM</button>
+    <button class="filter-btn" onclick="setFilter('4plus', this)">4Plus</button>
+    <button class="filter-btn" onclick="setFilter('transportes', this)">Transportes</button>
+    <button class="filter-btn" onclick="setFilter('flashes', this)">Flashes</button>
+  `;
+
+  bar.innerHTML = btns;
+
+  // Reactivar filtro atual se ainda existir, senão resetar para 'all'
+  const activeBtn = bar.querySelector(`[onclick="setFilter('${state.activeFilter}', this)"]`);
+  if (activeBtn) {
+    bar.querySelector('.filter-btn').classList.remove('active');
+    activeBtn.classList.add('active');
+  } else {
+    state.activeFilter = 'all';
+  }
+}
+
+// ── SUPORTE LABEL ─────────────────────────────────────────────
+function suporteLabel(c) {
+  if (c.subtype === '4x3') return 'Led 4x3';
+  if (c.subtype === 'flagship') return 'Flagship';
+  if (c.subtype === 'leds') return "Led's";
+  if (c.subtype === 'analog') return c.suporte;
+  return c.suporte;
+}
+
+// ── FIELD CARDS ────────────────────────────────────────────────
+function syncTypeToggle() {
+  const btns = document.querySelectorAll('.type-btn');
+  if (!btns.length) return; // DOM not ready yet
+  btns.forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-type') === state.activeType);
+  });
+}
+
+function setType(type, btn) {
+  state.activeType = type;
+  state.activeFilter = 'all';
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFilterBar();
+  renderCards();
+  saveState();
+}
+
+function setFilter(f, btn) {
+  state.activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards();
+}
+
+function renderCards() {
+  if (!state.activeWeek || !state.weeks[state.activeWeek]) return;
+  renderFilterBar();
+
+  const campaigns = state.weeks[state.activeWeek].campaigns;
+  const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+  const filter = state.activeFilter;
+
+  let filtered = campaigns.filter(c => {
+    // Filtrar por tipo (digital vs analógico)
+    const _isAnalog = state.activeType === 'analog';
+    if (_isAnalog && c.subtype !== 'analog') return false;
+    if (!_isAnalog && c.subtype === 'analog') return false;
+
+    const id = campaignId(c);
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+
+    if (search && !c.campanha.toLowerCase().includes(search) &&
+        !c.venda.toLowerCase().includes(search)) return false;
+
+    if (filter === 'pending' && done) return false;
+    if (filter === 'done' && !done) return false;
+    if (filter === '4x3' && c.subtype !== '4x3') return false;
+    if (filter === 'flagship' && c.subtype !== 'flagship') return false;
+    if (filter === 'tv' && !c.suporte.toUpperCase().includes('TV')) return false;
+    if (filter === 'leds' && c.subtype !== 'leds') return false;
+    if (filter === 'tomi' && !c.suporte.toLowerCase().includes('tomi')) return false;
+    if (filter === 'analog' && c.subtype !== 'analog') return false;
+    if (filter === 'mupis' && !c.suporte.toUpperCase().includes('MUPI')) return false;
+    if (filter === 'ppa' && !c.suporte.toUpperCase().includes('PPA')) return false;
+    if (filter === '8x3' && !c.suporte.toUpperCase().includes('8X3')) return false;
+    if (filter === 'paredes' && !c.suporte.toUpperCase().includes('PARED')) return false;
+    if (filter === 'atm' && !c.suporte.toUpperCase().includes('ATM')) return false;
+    if (filter === '4plus' && !c.suporte.toUpperCase().replace(/\s/g,'').includes('4PLUS') && !c.suporte.includes('(4x1')) return false;
+    if (filter === 'transportes' && !['ELÉT','ELET','RI AUTO','CARRIS','STCP'].some(x => c.suporte.toUpperCase().includes(x))) return false;
+    if (filter === 'flashes' && !c.suporte.toUpperCase().includes('FLASH')) return false;
+    if (filter === '3ecras' && !c.suporte.toLowerCase().includes('3 ecr') && !c.suporte.toLowerCase().includes('3ecr')) return false;
+
+    return true;
+  });
+
+  // Progress bar
+  const total = campaigns.length;
+  const done = campaigns.filter(c => {
+    const id = campaignId(c);
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    return p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+  }).length;
+
+  document.getElementById('progressFill').style.width = total ? `${(done/total)*100}%` : '0%';
+  document.getElementById('progressText').textContent = `${done} / ${total} concluídas`;
+
+  // Render cards
+  const list = document.getElementById('cardList');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nenhuma campanha encontrada</div></div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(c => {
+    const id = campaignId(c);
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    const isDone = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+
+    const tags = [];
+    if (c.r > 0) tags.push(`<span class="tag rua">RUA ×${c.r}</span>`);
+    if (c.m > 0) tags.push(`<span class="tag metro">METRO ×${c.m}</span>`);
+    if (c.ip > 0) tags.push(`<span class="tag ip">IP ×${c.ip}</span>`);
+
+    const counters = [];
+    if (c.r > 0) counters.push(buildCounter(id, 'r', p.r, c.r, 'RUA'));
+    if (c.m > 0) counters.push(buildCounter(id, 'm', p.m, c.m, 'MT'));
+    if (c.ip > 0) counters.push(buildCounter(id, 'ip', p.ip, c.ip, 'IP'));
+
+    return `
+      <div class="card ${isDone ? 'done' : ''}" id="card_${id}">
+        <div class="card-header" onclick="toggleCard('${id}', ${c.r}, ${c.m}, ${c.ip})">
+          <div class="card-check" onclick="toggleDone(event,'${id}',${c.r},${c.m},${c.ip})">
+            <span class="card-check-icon">✓</span>
+          </div>
+          <div class="card-info">
+            <div class="card-name">${c.campanha || '—'}</div>
+            <div class="card-meta">
+              <span class="tag">${c.venda}</span>
+              <span class="tag">${suporteLabel(c)}</span>
+              ${tags.join('')}
+            </div>
+          </div>
+        </div>
+        ${counters.length ? `<div class="card-photos">${counters.join('')}</div>` : ''}
+        ${c.notas ? `<div class="card-notes">📌 ${c.notas}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function buildCounter(id, type, current, target, label) {
+  const isDone = current >= target;
+  return `
+    <div class="photo-counter">
+      <span class="photo-type">${label}</span>
+      <div class="counter-controls">
+        <button class="counter-btn" onclick="changeCount(event,'${id}','${type}',-1)">−</button>
+        <div class="counter-val ${isDone ? 'done' : ''}" id="cv_${id}_${type}">${current}</div>
+        <button class="counter-btn" onclick="changeCount(event,'${id}','${type}',1)">+</button>
+      </div>
+      <span class="counter-total">/${target}</span>
+    </div>
+  `;
+}
+
+function changeCount(e, id, type, delta) {
+  e.stopPropagation();
+  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0 };
+  state.progress[id][type] = Math.max(0, (state.progress[id][type] || 0) + delta);
+  saveState();
+
+  // Update counter display
+  const valEl = document.getElementById(`cv_${id}_${type}`);
+  if (valEl) {
+    const campaign = findCampaign(id);
+    const target = campaign ? campaign[type] : 99;
+    const current = state.progress[id][type];
+    valEl.textContent = current;
+    valEl.classList.toggle('done', current >= target);
+  }
+
+  // Update card done state
+  updateCardDone(id);
+  updateProgress();
+  saveState();
+}
+
+function toggleDone(e, id, r, m, ip) {
+  e.stopPropagation();
+  if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0 };
+  const p = state.progress[id];
+  const isDone = p.r >= r && p.m >= m && p.ip >= ip && (r + m + ip > 0);
+
+  if (isDone) {
+    // Uncheck
+    state.progress[id] = { r: 0, m: 0, ip: 0 };
+  } else {
+    // Mark all done
+    state.progress[id] = { r, m, ip };
+  }
+  saveState();
+  renderCards();
+  renderHome();
+  renderReport();
+}
+
+function toggleCard(id, r, m, ip) {
+  // Just visual expand — handled by the counters
+}
+
+function updateCardDone(id) {
+  const campaign = findCampaign(id);
+  if (!campaign) return;
+  const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+  const isDone = p.r >= campaign.r && p.m >= campaign.m && p.ip >= campaign.ip &&
+                 (campaign.r + campaign.m + campaign.ip > 0);
+  const card = document.getElementById(`card_${id}`);
+  if (card) {
+    card.classList.toggle('done', isDone);
+    const check = card.querySelector('.card-check');
+    if (check) {
+      check.style.background = isDone ? 'var(--accent)' : '';
+      check.style.borderColor = isDone ? 'var(--accent)' : '';
+    }
+  }
+}
+
+function updateProgress() {
+  if (!state.activeWeek) return;
+  const campaigns = state.weeks[state.activeWeek]?.campaigns || [];
+  const total = campaigns.length;
+  const done = campaigns.filter(c => {
+    const id = campaignId(c);
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    return p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+  }).length;
+  document.getElementById('progressFill').style.width = total ? `${(done/total)*100}%` : '0%';
+  document.getElementById('progressText').textContent = `${done} / ${total} concluídas`;
+}
+
+function findCampaign(id) {
+  for (const w of Object.values(state.weeks)) {
+    const c = w.campaigns.find(c => campaignId(c) === id);
+    if (c) return c;
+  }
+  return null;
+}
+
+// ── REPORT ─────────────────────────────────────────────────────
+function renderReport() {
+  const weeks = Object.keys(state.weeks);
+  if (!weeks.length) return;
+
+  // Aggregate photos by venda number
+  const byVenda = {};
+  weeks.forEach(w => {
+    state.weeks[w].campaigns.forEach(c => {
+      const id = campaignId(c);
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
+      if (photos > 0) {
+        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
+        byVenda[c.venda].photos += photos;
+      }
+    });
+  });
+
+  const entries = Object.entries(byVenda).sort((a,b) => a[0].localeCompare(b[0]));
+  const total = entries.reduce((s, [, v]) => s + v.photos, 0);
+
+  document.getElementById('reportSub').textContent =
+    `${entries.length} vendas · ${total} fotos totais`;
+
+  const tbody = document.getElementById('reportBody');
+  tbody.innerHTML = entries.map(([venda, data]) => `
+    <tr>
+      <td style="font-family:'DM Mono',monospace; font-size:12px; color:var(--muted)">${venda}</td>
+      <td>${data.campanha}</td>
+      <td class="num">${data.photos}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('reportTotal').textContent = total;
+}
+
+function exportReport() {
+  const weeks = Object.keys(state.weeks);
+  if (!weeks.length) { showToast('Sem dados para exportar'); return; }
+
+  const byVenda = {};
+  weeks.forEach(w => {
+    state.weeks[w].campaigns.forEach(c => {
+      const id = campaignId(c);
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
+      if (photos > 0) {
+        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
+        byVenda[c.venda].photos += photos;
+      }
+    });
+  });
+
+  const lines = ['Nº Venda,Campanha,Nº Fotos'];
+  Object.entries(byVenda).sort().forEach(([v, d]) => {
+    lines.push(`"${v}","${d.campanha}",${d.photos}`);
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'report_mop.csv'; a.click();
+  showToast('✓ Report exportado');
+}
+
+function copyReport() {
+  const byVenda = {};
+  Object.values(state.weeks).forEach(w => {
+    w.campaigns.forEach(c => {
+      const id = campaignId(c);
+      const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+      const photos = (p.r || 0) + (p.m || 0) + (p.ip || 0);
+      if (photos > 0) {
+        if (!byVenda[c.venda]) byVenda[c.venda] = { campanha: c.campanha, photos: 0 };
+        byVenda[c.venda].photos += photos;
+      }
+    });
+  });
+
+  const lines = Object.entries(byVenda).sort().map(([v, d]) => `${v} · ${d.campanha} · ${d.photos} fotos`);
+  const total = Object.values(byVenda).reduce((s, v) => s + v.photos, 0);
+  lines.push(`\nTOTAL: ${total} fotos`);
+
+  navigator.clipboard.writeText(lines.join('\n')).then(() => showToast('✓ Copiado'));
+}
+
+// ── LOADED WEEKS ───────────────────────────────────────────────
+function renderLoadedWeeks() {
+  const el = document.getElementById('loadedWeeks');
+  const weeks = Object.keys(state.weeks);
+  if (!weeks.length) {
+    el.innerHTML = '<div style="font-size:13px; color:var(--muted)">Nenhuma semana carregada</div>';
+    return;
+  }
+  el.innerHTML = weeks.map(w => `
+    <div class="week-item">
+      <div>
+        <div class="week-name">${w}</div>
+        <div class="week-stats">Carregado: ${state.weeks[w].loaded} · ${state.weeks[w].campaigns.length} campanhas</div>
+      </div>
+      <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;"
+              onclick="removeWeek('${w}')">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeWeek(w) {
+  delete state.weeks[w];
+  if (state.activeWeek === w) {
+    const remaining = Object.keys(state.weeks);
+    state.activeWeek = remaining.length ? remaining[0] : null;
+  }
+  saveState();
+  renderAll();
+  showToast(`${w} removida`);
+}
+
+function clearAllData() {
+  if (!confirm('Apagar todos os dados? Esta ação não pode ser revertida.')) return;
+  state = { weeks: {}, progress: {}, activeWeek: null, activeFilter: 'all', currentTab: 'home' };
+  saveState();
+  renderAll();
+  document.getElementById('importStats').style.display = 'none';
+  document.getElementById('uploadSuccess').style.display = 'none';
+  showToast('Dados apagados');
+}
+
+// ── TABS ───────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`view-${tab}`).classList.add('active');
+  document.querySelectorAll('nav button')[['home','field','import','report','map'].indexOf(tab)].classList.add('active');
+  state.currentTab = tab;
+  if (tab === 'field') renderCards();
+  if (tab === 'report') renderReport();
+  if (tab === 'map') {
+    renderMapView();
+    initLeafletMap();
+  }
+}
+
+// ── TOAST ──────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── ANALOG IMPORT ─────────────────────────────────────────────
+function handleAnalogFile(file) {
+  if (!file) return;
+  const week = askWeek();
+  if (!week) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      processAnalogRows(rows, week);
+    } catch(err) {
+      showToast('❌ Erro ao ler o ficheiro');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function processAnalogRows(rows, weekName) {
+  const campaigns = [];
+  let imported = 0, skipped = 0;
+  let svCounter = 0;
+
+  // Extrair número da semana a partir do nome (ex: "S23" → 23)
+  const weekNum = parseInt(weekName.replace(/\D/g, ''));
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const campanha  = String(row[0] || '').trim();   // A = CAMPANHA
+    const formato   = String(row[1] || '').trim();   // B = Formato
+    const semanaRaw = row[3];                         // D = Semana (número)
+    let   venda     = String(row[12] || '').trim();  // M = Nº Venda
+
+    if (!campanha) { skipped++; continue; }
+
+    // Filtrar por semana
+    const semana = parseFloat(String(semanaRaw || ''));
+    if (isNaN(semana) || Math.round(semana) !== weekNum) { skipped++; continue; }
+
+    // Normalizar referências SV / V. incompleto / N/A → SV1, SV2...
+    const vendaUp = venda.toUpperCase();
+    const isSV = vendaUp === 'SV' || venda === '' ||
+                 vendaUp === 'V.' || vendaUp === 'N/A' || /^falta\s*venda/i.test(venda);
+    if (isSV) {
+      svCounter++;
+      venda = `SV${svCounter}`;
+    }
+
+    // Calcular fotos por formato
+    const fUp = formato.toUpperCase();
+    let r = 0, m = 0, ip = 0;
+
+    if (fUp.includes('MUPI')) {
+      r = 2; m = 2; ip = 2;
+    } else if (fUp.includes('PPA')) {
+      r = 5;
+    } else if (fUp.includes('8X3')) {
+      r = 3;
+    } else if (fUp.includes('PARED')) {
+      m = 1;
+    } else if (fUp.includes('ATM')) {
+      r = 2;
+    } else if (fUp.replace(/\s/g,'').includes('4PLUS') || fUp.includes('4 PLUS') || fUp.includes('(4X1')) {
+      m = 3;
+    } else if (fUp.includes('ELÉT') || fUp.includes('ELET') || fUp.includes('RI AUTO') || fUp.includes('CARRIS') || fUp.includes('STCP')) {
+      r = 4;
+    } else if (fUp.includes('FLASH')) {
+      m = 3;
+    } else {
+      // Abrigos, Ativação, Canais, Colunas, Sancas, etc.
+      m = 1;
+    }
+
+    campaigns.push({
+      venda, campanha,
+      suporte: formato.split('\n')[0].split('/')[0].trim(),
+      subtype: 'analog',
+      notas: '',
+      r, m, ip
+    });
+    imported++;
+  }
+
+  // Juntar com digitais da mesma semana (ou criar semana nova)
+  if (!state.weeks[weekName]) {
+    state.weeks[weekName] = { campaigns: [], loaded: new Date().toLocaleDateString('pt') };
+  }
+  // Remover analógicos anteriores desta semana e adicionar os novos
+  state.weeks[weekName].campaigns = [
+    ...state.weeks[weekName].campaigns.filter(c => c.subtype !== 'analog'),
+    ...campaigns
+  ];
+  state.activeWeek = weekName;
+  saveState();
+
+  document.getElementById('uploadSuccess').style.display = 'block';
+  document.getElementById('uploadSuccess').textContent =
+    `✓ Analógicos carregados — ${imported} campanhas importadas`;
+
+  const statsEl = document.getElementById('importStats');
+  statsEl.style.display = 'block';
+  statsEl.innerHTML = `
+    <div class="stat-row">
+      <span class="stat-label">Tipo</span>
+      <span class="stat-value green">Analógicos</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Campanhas importadas</span>
+      <span class="stat-value green">${imported}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Ignoradas (sem campanha/venda)</span>
+      <span class="stat-value red">${skipped}</span>
+    </div>
+  `;
+
+  renderAll();
+  showToast(`✓ ${imported} analógicos carregados`);
+}
+
+// ── SYNC PROGRESS ─────────────────────────────────────────────
+function exportProgress() {
+  const data = {
+    version: 1,
+    exported: new Date().toISOString(),
+    weeks: state.weeks,
+    progress: state.progress,
+    activeWeek: state.activeWeek,
+    activeType: state.activeType,
+    mapData: state.mapData || {}
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toLocaleDateString('pt').replace(/\//g, '-');
+  a.href = url;
+  a.download = `mop_progresso_${date}.json`;
+  a.click();
+  showToast('✓ Progresso exportado');
+}
+
+function importProgress(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.version || !data.progress) {
+        showToast('❌ Ficheiro inválido');
+        return;
+      }
+      // Merge — manter semanas locais e sobrescrever progresso
+      if (data.weeks) state.weeks = { ...state.weeks, ...data.weeks };
+      if (data.progress) state.progress = { ...state.progress, ...data.progress };
+      if (data.activeWeek) state.activeWeek = data.activeWeek;
+      if (data.activeType) state.activeType = data.activeType;
+      if (data.mapData) state.mapData = data.mapData;
+      saveState();
+      renderAll();
+      showToast('✓ Progresso importado');
+      // Reset input
+      document.getElementById('progressInput').value = '';
+    } catch(e) {
+      showToast('❌ Erro ao ler o ficheiro');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── MAP ────────────────────────────────────────────────────────
+function handleMapFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      processMapRows(rows);
+    } catch(err) {
+      console.error(err);
+      showToast('❌ Erro ao ler o ficheiro: ' + err.message);
+    }
+  };
+  reader.onerror = () => showToast('❌ Erro ao ler o ficheiro');
+  reader.readAsArrayBuffer(file);
+}
+
+function processMapRows(rows) {
+  const campanhas = {};
+  const header = rows[0] || [];
+
+  // 1. Coluna de campanha — tem '|' nos dados
+  let campCol = -1;
+  for (let r = 1; r < Math.min(10, rows.length); r++) {
+    for (let i = (rows[r] || []).length - 1; i >= 0; i--) {
+      if (String(rows[r][i] || '').includes('|')) { campCol = i; break; }
+    }
+    if (campCol !== -1) break;
+  }
+  if (campCol === -1) { showToast('❌ Coluna de campanhas não encontrada'); return; }
+
+  // 2. Colunas de lat/lng numéricas — pelo header
+  let latCol = -1, lngCol = -1, gpsCol = -1;
+  header.forEach((h, i) => {
+    const hl = String(h || '').toLowerCase();
+    if (hl.includes('lat')) latCol = i;
+    if (hl.includes('lon') || hl.includes('lng')) lngCol = i;
+    if (hl.includes('gps') || hl.includes('map')) gpsCol = i;
+  });
+
+  // Fallback: detectar lat/lng pelos valores numéricos
+  if (latCol === -1 || lngCol === -1) {
+    const sample = rows[1] || [];
+    for (let i = 0; i < sample.length; i++) {
+      const v = parseFloat(String(sample[i] || ''));
+      if (!isNaN(v) && v > 35 && v < 45) latCol = i;
+      if (!isNaN(v) && v < -5 && v > -12) lngCol = i;
+    }
+  }
+
+  // Fallback: detectar coluna GPS pelo URL nas células
+  if (gpsCol === -1) {
+    const sample = rows[1] || [];
+    for (let i = 0; i < sample.length; i++) {
+      if (String(sample[i] || '').includes('maps')) { gpsCol = i; break; }
+    }
+  }
+
+  if (latCol === -1 && lngCol === -1 && gpsCol === -1) {
+    showToast('❌ Não foi possível encontrar coordenadas no ficheiro');
+    return;
+  }
+
+  const mupiCol = 1, moradaCol = 2;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const mupi   = String(row[mupiCol] || '').trim();
+    const morada = String(row[moradaCol] || '').trim();
+    const camp   = String(row[campCol] || '').trim();
+    if (!mupi || !camp) continue;
+
+    let lat = NaN, lng = NaN;
+
+    // Caso 1: colunas numéricas de lat/lng
+    if (latCol !== -1 && lngCol !== -1) {
+      lat = parseFloat(String(row[latCol] || ''));
+      lng = parseFloat(String(row[lngCol] || ''));
+    }
+
+    // Caso 2: extrair do URL Google Maps (ex: /place/38.703+-9.194)
+    if ((isNaN(lat) || isNaN(lng)) && gpsCol !== -1) {
+      const url = String(row[gpsCol] || '');
+      const m = url.match(/place\/(-?\d+\.?\d*)\+(-?\d+\.?\d*)/);
+      if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+    }
+
+    if (isNaN(lat) || isNaN(lng)) continue;
+
+    camp.split('|').forEach(c => {
+      c = c.trim();
+      if (!c) return;
+      if (!campanhas[c]) campanhas[c] = [];
+      campanhas[c].push({ mupi, morada, lat, lng });
+    });
+  }
+
+  if (Object.keys(campanhas).length === 0) {
+    showToast('❌ Nenhuma campanha encontrada no ficheiro');
+    return;
+  }
+
+  state.mapData = campanhas;
+  saveState();
+  switchTab('map');
+  showToast(`✓ ${Object.keys(campanhas).length} campanhas carregadas no mapa`);
+  try { document.getElementById('mapFileInput').value = ''; } catch(e) {}
+}
+
+
+function initLeafletMap() {
+  setTimeout(() => {
+    // Destroy existing map instance to avoid "already initialized" error
+    if (leafletMap) {
+      leafletMap.remove();
+      leafletMap = null;
+      mapMarkers = [];
+    }
+    const mapEl = document.getElementById('map');
+    if (!mapEl) return;
+    // Force height so Leaflet can measure it
+    mapEl.style.height = '420px';
+    leafletMap = L.map('map', { zoomControl: true }).setView([38.736, -9.142], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap © CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(leafletMap);
+    leafletMap.invalidateSize(true);
+    // Show selected campaign if any
+    const sel = document.getElementById('campaignSelect');
+    if (sel && sel.value) showMapCampaign(sel.value);
+  }, 300);
+}
+
+function renderMapView() {
+  const campanhas = state.mapData || {};
+  const names = Object.keys(campanhas).sort();
+  const hasData = names.length > 0;
+
+  document.getElementById('mapEmpty').style.display = hasData ? 'none' : 'block';
+  if (!hasData) {
+    document.getElementById('mapContent').style.display = 'none';
+    return;
+  }
+  document.getElementById('mapContent').style.display = 'block';
+
+  // Populate select
+  const sel = document.getElementById('campaignSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Seleciona uma campanha...</option>' +
+    names.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n} (${campanhas[n].length} mupis)</option>`).join('');
+
+  // Map init and campaign display handled by switchTab after DOM is ready
+}
+
+function filterMap() {
+  const sel = document.getElementById('campaignSelect');
+  const name = sel.value;
+  if (!name) {
+    clearMapMarkers();
+    document.getElementById('mapStats').textContent = 'Seleciona uma campanha para ver os Mupis no mapa';
+    return;
+  }
+  showMapCampaign(name);
+}
+
+function showMapCampaign(name) {
+  const campanhas = state.mapData || {};
+  const mupis = campanhas[name] || [];
+  clearMapMarkers();
+
+  if (!leafletMap) return;
+
+  const bounds = [];
+
+  mupis.forEach(m => {
+    const marker = L.circleMarker([m.lat, m.lng], {
+      radius: 7,
+      fillColor: '#0071e3',
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.85
+    }).addTo(leafletMap);
+
+    marker.bindPopup(`
+      <strong>${m.mupi}</strong><br>
+      <span style="color:#86868b">${m.morada}</span>
+    `);
+    mapMarkers.push(marker);
+    bounds.push([m.lat, m.lng]);
+  });
+
+  if (bounds.length > 0) {
+    leafletMap.fitBounds(bounds, { padding: [30, 30] });
+  }
+
+  document.getElementById('mapStats').innerHTML =
+    `<strong style="color:var(--text)">${name}</strong> — <span style="color:var(--accent); font-weight:600">${mupis.length} Mupis</span>`;
+}
+
+function clearMapMarkers() {
+  mapMarkers.forEach(m => m.remove());
+  mapMarkers = [];
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+loadState();
+renderAll();
+initDropZone();
+</script>
+</body>
+</html>
