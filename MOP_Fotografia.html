@@ -221,6 +221,28 @@
     font-size: 12px; color: var(--orange); font-weight: 500;
   }
 
+  /* ── EDITABLE FIELDS ── */
+  .editable {
+    background: none; border: none; outline: none;
+    font-family: inherit; color: inherit; font-size: inherit;
+    font-weight: inherit; width: 100%; cursor: text;
+    padding: 0; margin: 0; line-height: inherit;
+  }
+  .editable:focus {
+    background: var(--accent-light); border-radius: 4px;
+    padding: 2px 6px; margin: -2px -6px;
+    outline: 1.5px solid var(--accent);
+  }
+  .counter-target {
+    font-size: 11px; color: var(--muted); font-weight: 500;
+    cursor: pointer; border-bottom: 1px dashed var(--border);
+    min-width: 16px; text-align: center; display: inline-block;
+  }
+  .counter-target:focus {
+    outline: 1.5px solid var(--accent); border-radius: 3px;
+    border-bottom: none; background: var(--accent-light); padding: 0 2px;
+  }
+
   /* ── HOME VIEW ── */
   .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .summary-card {
@@ -503,6 +525,9 @@
       <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
       <div class="progress-text" id="progressText">0 / 0</div>
     </div>
+    <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+      <button class="btn btn-ghost" style="font-size:12px; padding:7px 14px;" onclick="openNewCampaignModal()">+ Nova campanha</button>
+    </div>
     <div id="cardList"></div>
   </div>
 </div>
@@ -601,6 +626,68 @@
 <div class="toast" id="toast"></div>
 <button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
+<!-- NEW CAMPAIGN MODAL -->
+<div class="modal-overlay" id="newCampaignModal">
+  <div class="modal-box" style="padding-bottom:28px; max-height:90dvh; overflow-y:auto;">
+    <div class="modal-title">Nova Campanha</div>
+    <div class="modal-sub" style="margin-bottom:16px;">Preenche os campos e adiciona à semana activa</div>
+
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div>
+        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Nome da campanha</label>
+        <input id="nc_campanha" type="text" class="modal-input" style="font-size:15px; font-weight:500; text-align:left; margin-top:6px;" placeholder="Ex: Sagres">
+      </div>
+      <div>
+        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Nº Venda</label>
+        <input id="nc_venda" type="text" class="modal-input" style="font-size:15px; font-weight:500; text-align:left; margin-top:6px;" placeholder="Ex: V.4500/26 ou SV1">
+      </div>
+      <div>
+        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Suporte</label>
+        <input id="nc_suporte" type="text" class="modal-input" style="font-size:15px; font-weight:500; text-align:left; margin-top:6px;" placeholder="Ex: Digital - Ecrãs TV">
+      </div>
+      <div>
+        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Tipo</label>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button id="nc_type_digital" onclick="setNCType('digital')"
+            style="flex:1; padding:10px; border-radius:var(--radius-sm); border:1.5px solid var(--accent); background:var(--accent); color:#fff; font-size:13px; font-weight:600; cursor:pointer;">
+            Digitais
+          </button>
+          <button id="nc_type_analog" onclick="setNCType('analog')"
+            style="flex:1; padding:10px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--surface); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer;">
+            Analógicos
+          </button>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Nº de fotos</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:6px;">
+          <div style="text-align:center;">
+            <div style="font-size:11px; color:var(--accent); font-weight:600; margin-bottom:4px;">RUA</div>
+            <input id="nc_r" type="number" min="0" value="0" class="modal-input" style="font-size:18px; margin-bottom:0;">
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; color:var(--purple); font-weight:600; margin-bottom:4px;">METRO</div>
+            <input id="nc_m" type="number" min="0" value="0" class="modal-input" style="font-size:18px; margin-bottom:0;">
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; color:var(--orange); font-weight:600; margin-bottom:4px;">IP</div>
+            <input id="nc_ip" type="number" min="0" value="0" class="modal-input" style="font-size:18px; margin-bottom:0;">
+          </div>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Observações</label>
+        <input id="nc_notas" type="text" class="modal-input" style="font-size:14px; font-weight:400; text-align:left; margin-top:6px;" placeholder="Opcional">
+      </div>
+    </div>
+
+    <div class="modal-btns" style="margin-top:20px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeNewCampaignModal()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="confirmNewCampaign()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
 <!-- WEEK MODAL -->
 <div class="modal-overlay" id="weekModal">
   <div class="modal-box">
@@ -626,6 +713,7 @@ var state = {
   progress: {},   // { 'campaignId': { r: 0, m: 0, ip: 0, done: false } }
   activeWeek: null,
   activeFilter: 'all',
+  activeSubFilter: 'all',
   activeType: 'digital',
   mapData: {},
   currentTab: 'home',
@@ -943,6 +1031,7 @@ function renderWeekSelector() {
 function selectWeek(w) {
   state.activeWeek = w;
   state.activeFilter = 'all';
+  state.activeSubFilter = 'all';
   document.getElementById('currentWeekBadge').textContent = w;
   renderWeekSelector();
   // Sincronizar toggle visual
@@ -987,19 +1076,14 @@ function renderFilterBar() {
   `;
   sub.innerHTML = subBtns;
 
-  // Reactivar filtro actual nas duas barras
-  const allBtns = [...bar.querySelectorAll('.filter-btn'), ...sub.querySelectorAll('.filter-btn')];
-  const statusFilters = ['all', 'pending', 'done'];
-  const isStatusFilter = statusFilters.includes(state.activeFilter);
+  // Reactivar filtros activos nas duas barras independentemente
+  const activeMain = bar.querySelector(`[onclick="setFilter('${state.activeFilter}', this)"]`);
+  if (activeMain) activeMain.classList.add('active');
+  else { bar.querySelector('.filter-btn').classList.add('active'); state.activeFilter = 'all'; }
 
-  if (isStatusFilter) {
-    const activeBtn = bar.querySelector(`[onclick="setFilter('${state.activeFilter}', this)"]`);
-    if (activeBtn) activeBtn.classList.add('active');
-    else { bar.querySelector('.filter-btn').classList.add('active'); state.activeFilter = 'all'; }
-  } else {
-    const activeBtn = sub.querySelector(`[onclick="setFilter('${state.activeFilter}', this)"]`);
-    if (activeBtn) activeBtn.classList.add('active');
-    else { bar.querySelector('.filter-btn').classList.add('active'); state.activeFilter = 'all'; }
+  if (state.activeSubFilter && state.activeSubFilter !== 'all') {
+    const activeSub = sub.querySelector(`[onclick="setFilter('${state.activeSubFilter}', this)"]`);
+    if (activeSub) activeSub.classList.add('active');
   }
 }
 
@@ -1024,6 +1108,7 @@ function syncTypeToggle() {
 function setType(type, btn) {
   state.activeType = type;
   state.activeFilter = 'all';
+  state.activeSubFilter = 'all';
   document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderFilterBar();
@@ -1032,9 +1117,14 @@ function setType(type, btn) {
 }
 
 function setFilter(f, btn) {
-  state.activeFilter = f;
-  document.querySelectorAll('#filterBar .filter-btn, #filterBarSub .filter-btn')
-    .forEach(b => b.classList.remove('active'));
+  const statusFilters = ['all', 'pending', 'done'];
+  if (statusFilters.includes(f)) {
+    state.activeFilter = f;
+    document.querySelectorAll('#filterBar .filter-btn').forEach(b => b.classList.remove('active'));
+  } else {
+    state.activeSubFilter = f;
+    document.querySelectorAll('#filterBarSub .filter-btn').forEach(b => b.classList.remove('active'));
+  }
   btn.classList.add('active');
   renderCards();
 }
@@ -1060,23 +1150,27 @@ function renderCards() {
     if (search && !c.campanha.toLowerCase().includes(search) &&
         !c.venda.toLowerCase().includes(search)) return false;
 
+    // Filtro de estado (linha 1)
     if (filter === 'pending' && done) return false;
     if (filter === 'done' && !done) return false;
-    if (filter === '4x3' && c.subtype !== '4x3') return false;
-    if (filter === 'flagship' && c.subtype !== 'flagship') return false;
-    if (filter === 'tv' && !c.suporte.toUpperCase().includes('TV')) return false;
-    if (filter === 'leds' && c.subtype !== 'leds') return false;
-    if (filter === 'tomi' && !c.suporte.toLowerCase().includes('tomi')) return false;
-    if (filter === 'analog' && c.subtype !== 'analog') return false;
-    if (filter === 'mupis' && !c.suporte.toUpperCase().includes('MUPI')) return false;
-    if (filter === 'ppa' && !c.suporte.toUpperCase().includes('PPA')) return false;
-    if (filter === '8x3' && !c.suporte.toUpperCase().includes('8X3')) return false;
-    if (filter === 'paredes' && !c.suporte.toUpperCase().includes('PARED')) return false;
-    if (filter === 'atm' && !c.suporte.toUpperCase().includes('ATM')) return false;
-    if (filter === '4plus' && !c.suporte.toUpperCase().replace(/\s/g,'').includes('4PLUS') && !c.suporte.includes('(4x1')) return false;
-    if (filter === 'transportes' && !['ELÉT','ELET','RI AUTO','CARRIS','STCP'].some(x => c.suporte.toUpperCase().includes(x))) return false;
-    if (filter === 'flashes' && !c.suporte.toUpperCase().includes('FLASH')) return false;
-    if (filter === '3ecras' && !c.suporte.toLowerCase().includes('3 ecr') && !c.suporte.toLowerCase().includes('3ecr')) return false;
+
+    // Filtro de suporte (linha 2) — cumulativo com o de estado
+    const sub = state.activeSubFilter || 'all';
+    if (sub === '4x3' && c.subtype !== '4x3') return false;
+    if (sub === 'flagship' && c.subtype !== 'flagship') return false;
+    if (sub === 'tv' && !c.suporte.toUpperCase().includes('TV')) return false;
+    if (sub === 'leds' && c.subtype !== 'leds') return false;
+    if (sub === 'tomi' && !c.suporte.toLowerCase().includes('tomi')) return false;
+    if (sub === 'analog' && c.subtype !== 'analog') return false;
+    if (sub === 'mupis' && !c.suporte.toUpperCase().includes('MUPI')) return false;
+    if (sub === 'ppa' && !c.suporte.toUpperCase().includes('PPA')) return false;
+    if (sub === '8x3' && !c.suporte.toUpperCase().includes('8X3')) return false;
+    if (sub === 'paredes' && !c.suporte.toUpperCase().includes('PARED')) return false;
+    if (sub === 'atm' && !c.suporte.toUpperCase().includes('ATM')) return false;
+    if (sub === '4plus' && !c.suporte.toUpperCase().replace(/\s/g,'').includes('4PLUS') && !c.suporte.includes('(4x1')) return false;
+    if (sub === 'transportes' && !['ELÉT','ELET','RI AUTO','CARRIS','STCP'].some(x => c.suporte.toUpperCase().includes(x))) return false;
+    if (sub === 'flashes' && !c.suporte.toUpperCase().includes('FLASH')) return false;
+    if (sub === '3ecras' && !c.suporte.toLowerCase().includes('3 ecr') && !c.suporte.toLowerCase().includes('3ecr')) return false;
 
     return true;
   });
@@ -1121,7 +1215,7 @@ function renderCards() {
             <span class="card-check-icon">✓</span>
           </div>
           <div class="card-info">
-            <div class="card-name">${c.campanha || '—'}</div>
+            <div class="card-name"><input class="editable" value="${(c.campanha || '—').replace(/"/g, '&quot;')}" onclick="event.stopPropagation()" onchange="editField(event,'${id}','campanha')"></div>
             <div class="card-meta">
               <span class="tag">${c.venda}</span>
               <span class="tag">${suporteLabel(c)}</span>
@@ -1131,7 +1225,7 @@ function renderCards() {
         </div>
         ${counters.length ? `<div class="card-photos">${counters.join('')}</div>` : ''}
         ${c.rede ? `<div class="card-notes" style="color:var(--muted)">📍 ${c.rede}</div>` : ''}
-        ${c.notas ? `<div class="card-notes">📌 ${c.notas}</div>` : ''}
+        <div class="card-notes">📌 <input class="editable" style="color:var(--orange)" value="${(c.notas||'').replace(/"/g,'&quot;')}" placeholder="Observações..." onclick="event.stopPropagation()" onchange="editField(event,'${id}','notas')"></div>
         <div style="padding:0 16px 10px 49px;">
           <button onclick="deleteCampaign(event,'${id}')" style="font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:0; font-weight:500;">🗑 Apagar campanha</button>
         </div>
@@ -1150,7 +1244,7 @@ function buildCounter(id, type, current, target, label) {
         <div class="counter-val ${isDone ? 'done' : ''}" id="cv_${id}_${type}">${current}</div>
         <button class="counter-btn" onclick="changeCount(event,'${id}','${type}',1)">+</button>
       </div>
-      <span class="counter-total">/${target}</span>
+      <span class="counter-total">/<span class="counter-target" contenteditable="true" onclick="event.stopPropagation()" onblur="editTarget(event,'${id}','${type}')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${target}</span></span>
     </div>
   `;
 }
@@ -1213,6 +1307,89 @@ function toggleDone(e, id, r, m, ip) {
 
 function toggleCard(id, r, m, ip) {
   // Just visual expand — handled by the counters
+}
+
+// ── NEW CAMPAIGN MODAL ────────────────────────────────────────
+var _ncType = 'digital';
+
+function openNewCampaignModal() {
+  if (!state.activeWeek) { showToast('Selecciona uma semana primeiro'); return; }
+  _ncType = state.activeType;
+  document.getElementById('nc_campanha').value = '';
+  document.getElementById('nc_venda').value = '';
+  document.getElementById('nc_suporte').value = '';
+  document.getElementById('nc_r').value = '0';
+  document.getElementById('nc_m').value = '0';
+  document.getElementById('nc_ip').value = '0';
+  document.getElementById('nc_notas').value = '';
+  setNCType(_ncType);
+  document.getElementById('newCampaignModal').classList.add('show');
+  setTimeout(() => document.getElementById('nc_campanha').focus(), 300);
+}
+
+function closeNewCampaignModal() {
+  document.getElementById('newCampaignModal').classList.remove('show');
+}
+
+function setNCType(type) {
+  _ncType = type;
+  const dBtn = document.getElementById('nc_type_digital');
+  const aBtn = document.getElementById('nc_type_analog');
+  dBtn.style.background = type === 'digital' ? 'var(--accent)' : 'var(--surface)';
+  dBtn.style.color = type === 'digital' ? '#fff' : 'var(--muted)';
+  dBtn.style.borderColor = type === 'digital' ? 'var(--accent)' : 'var(--border)';
+  aBtn.style.background = type === 'analog' ? 'var(--accent)' : 'var(--surface)';
+  aBtn.style.color = type === 'analog' ? '#fff' : 'var(--muted)';
+  aBtn.style.borderColor = type === 'analog' ? 'var(--accent)' : 'var(--border)';
+}
+
+function confirmNewCampaign() {
+  const campanha = document.getElementById('nc_campanha').value.trim();
+  const venda    = document.getElementById('nc_venda').value.trim() || 'SV';
+  const suporte  = document.getElementById('nc_suporte').value.trim();
+  const r  = parseInt(document.getElementById('nc_r').value) || 0;
+  const m  = parseInt(document.getElementById('nc_m').value) || 0;
+  const ip = parseInt(document.getElementById('nc_ip').value) || 0;
+  const notas = document.getElementById('nc_notas').value.trim();
+
+  if (!campanha) { showToast('Introduz o nome da campanha'); return; }
+  if (!suporte)  { showToast('Introduz o suporte'); return; }
+
+  const newC = {
+    venda, campanha, suporte, rede: '',
+    subtype: _ncType === 'analog' ? 'analog' : '',
+    notas, r, m, ip
+  };
+
+  state.weeks[state.activeWeek].campaigns.push(newC);
+  saveState();
+  closeNewCampaignModal();
+  renderCards();
+  renderHome();
+  showToast(`✓ ${campanha} adicionada`);
+}
+
+function editField(event, id, field) {
+  const val = event.target.value.trim();
+  const campaign = findCampaign(id);
+  if (!campaign) return;
+  campaign[field] = val;
+  saveState();
+}
+
+function editTarget(event, id, type) {
+  const val = parseInt(event.target.textContent.trim());
+  if (isNaN(val) || val < 0) { event.target.textContent = '0'; return; }
+  const campaign = findCampaign(id);
+  if (!campaign) return;
+  campaign[type] = val;
+  // Update counter val done state
+  const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+  const valEl = document.getElementById(`cv_${id}_${type}`);
+  if (valEl) valEl.classList.toggle('done', (p[type] || 0) >= val);
+  saveState();
+  updateCardDone(id);
+  updateProgress();
 }
 
 function deleteCampaign(e, id) {
@@ -1862,7 +2039,11 @@ function showMapCampaign(name) {
 
     marker.bindPopup(`
       <strong>${m.mupi}</strong><br>
-      <span style="color:#86868b">${m.morada}</span>
+      <span style="color:#86868b">${m.morada}</span><br>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lng}" target="_blank"
+         style="color:#0071e3; font-size:12px; font-weight:600; text-decoration:none;">
+        🗺 Abrir no Google Maps
+      </a>
     `);
     mapMarkers.push(marker);
     bounds.push([m.lat, m.lng]);
