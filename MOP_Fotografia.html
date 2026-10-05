@@ -221,28 +221,6 @@
     font-size: 12px; color: var(--orange); font-weight: 500;
   }
 
-  /* ── EDITABLE FIELDS ── */
-  .editable {
-    background: none; border: none; outline: none;
-    font-family: inherit; color: inherit; font-size: inherit;
-    font-weight: inherit; width: 100%; cursor: text;
-    padding: 0; margin: 0; line-height: inherit;
-  }
-  .editable:focus {
-    background: var(--accent-light); border-radius: 4px;
-    padding: 2px 6px; margin: -2px -6px;
-    outline: 1.5px solid var(--accent);
-  }
-  .counter-target {
-    font-size: 11px; color: var(--muted); font-weight: 500;
-    cursor: pointer; border-bottom: 1px dashed var(--border);
-    min-width: 16px; text-align: center; display: inline-block;
-  }
-  .counter-target:focus {
-    outline: 1.5px solid var(--accent); border-radius: 3px;
-    border-bottom: none; background: var(--accent-light); padding: 0 2px;
-  }
-
   /* ── HOME VIEW ── */
   .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .summary-card {
@@ -410,6 +388,67 @@
     cursor:pointer; margin-bottom:12px;
   }
 
+  /* ── ROUTE ── */
+  .route-num-icon, .route-start-icon {
+    color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.3);
+  }
+  .route-num-icon { background:var(--accent); width:24px; height:24px; }
+  .route-start-icon { background:var(--red); width:28px; height:28px; font-size:14px; }
+  .route-summary {
+    background:var(--accent-light); border-radius:var(--radius-sm);
+    padding:11px 14px; margin-bottom:10px; font-size:13px; color:var(--accent);
+    font-weight:600; display:flex; justify-content:space-between; align-items:center;
+  }
+  .route-stop {
+    background:var(--surface); border-radius:var(--radius-sm);
+    padding:10px 12px; margin-bottom:6px; display:flex; align-items:center; gap:10px;
+    box-shadow:var(--shadow); cursor:pointer;
+  }
+  .route-stop-num {
+    width:22px; height:22px; border-radius:50%; background:var(--accent); color:#fff;
+    font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .route-stop-info { flex:1; min-width:0; }
+  .route-stop-name { font-size:13px; font-weight:600; color:var(--text); }
+  .route-stop-addr { font-size:11px; color:var(--muted); }
+  .route-stop-dist { font-size:11px; color:var(--muted); font-weight:500; white-space:nowrap; flex-shrink:0; }
+  #setStartBtn.active { background:var(--red); color:#fff; border-color:var(--red); }
+
+  /* ── SHEETS (pop-ups) ── */
+  .sheet-overlay { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.4);
+    display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+  .sheet-overlay.show { opacity:1; pointer-events:all; }
+  .sheet { background:var(--surface); width:100%; max-width:560px; max-height:85vh; border-radius:18px 18px 0 0;
+    display:flex; flex-direction:column; transform:translateY(100%); transition:transform 0.3s ease; }
+  .sheet-overlay.show .sheet { transform:translateY(0); }
+  .sheet-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 18px 10px; border-bottom:1px solid var(--border-light); }
+  .sheet-title { font-size:16px; font-weight:700; letter-spacing:-0.01em; }
+  .sheet-close { background:var(--surface2); border:none; border-radius:50%; width:28px; height:28px; font-size:13px; cursor:pointer; color:var(--text2); flex-shrink:0; }
+  .sheet-body { padding:14px 18px 28px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .chip-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .chip { padding:7px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); font-size:13px; font-weight:600; color:var(--text2); cursor:pointer; }
+  .chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .chip.active.metro { background:var(--purple); border-color:var(--purple); }
+  .chip.active.ip { background:var(--orange); border-color:var(--orange); }
+  .chip.small { padding:5px 11px; font-size:12px; }
+  .miss-summary { font-size:13px; font-weight:600; color:var(--accent); background:var(--accent-light); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:6px; }
+  .miss-row { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--border-light); }
+  .miss-info { flex:1; min-width:0; }
+  .miss-name { font-size:14px; font-weight:600; color:var(--text); }
+  .miss-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+  .miss-count { font-size:13px; font-weight:700; color:var(--red); white-space:nowrap; }
+  .station-row { padding:11px 0; border-bottom:1px solid var(--border-light); font-size:14px; color:var(--text); }
+  .adj-badge { font-size:11px; color:var(--orange); background:var(--orange-light); border-radius:6px; padding:5px 9px; margin:0 16px 8px 49px; display:block; font-weight:500; }
+  .adj-badge button { background:none; border:none; color:var(--accent); font-size:11px; font-weight:600; cursor:pointer; padding:0 0 0 6px; }
+  .loc-btn { font-size:12px; font-weight:600; color:var(--accent); background:var(--accent-light); border:none; border-radius:6px; padding:6px 11px; cursor:pointer; }
+  .link-card { border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px; overflow:hidden; }
+  .link-head { padding:11px 13px; font-size:13px; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; gap:8px; }
+  .link-pool { padding:4px 13px 12px; border-top:1px solid var(--border-light); max-height:260px; overflow-y:auto; }
+  .link-opt { display:flex; align-items:flex-start; gap:8px; padding:6px 0; font-size:13px; }
+  .link-section { font-size:12px; color:var(--muted); font-weight:600; margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.03em; }
+
+
   /* ── WEEK MODAL ── */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 500;
@@ -460,16 +499,26 @@
 <div class="view" id="view-map">
   <div id="mapEmpty" class="empty">
     <div class="empty-icon">🗺️</div>
-    <div class="empty-text">Importa o ficheiro de distribuição de Mupis para ver o mapa</div>
+    <div class="empty-text">Importa localizações (Rua / Metro / IP) para ver o mapa</div>
   </div>
   <div id="mapContent" style="display:none">
+    <div class="btn-row" style="margin-top:0; margin-bottom:10px;">
+      <button class="btn btn-ghost" id="setStartBtn" onclick="toggleSetStartMode()">📍 Definir ponto de partida</button>
+      <button class="btn btn-primary" onclick="calculateRoute()">🧭 Calcular rota da semana</button>
+    </div>
+    <div style="font-size:12px; color:var(--muted); margin-bottom:10px; display:flex; gap:14px; align-items:center;">
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#0071e3;margin-right:4px;"></span>Rua</span>
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#af52de;margin-right:4px;"></span>Metro</span>
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff9500;margin-right:4px;"></span>IP</span>
+      <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#34c759;margin-right:4px;"></span>Visitado</span>
+    </div>
     <div style="margin-bottom:12px;">
       <select id="campaignSelect" onchange="filterMap()"
         style="width:100%; padding:10px 14px; background:var(--surface);
                border:1px solid var(--border); border-radius:var(--radius-sm);
                color:var(--text); font-size:14px; font-family:-apple-system,sans-serif;
                outline:none; box-shadow:var(--shadow);">
-        <option value="">Seleciona uma campanha...</option>
+        <option value="">Ver uma campanha específica (opcional)...</option>
       </select>
     </div>
     <div style="background:var(--surface); border-radius:var(--radius);
@@ -477,11 +526,13 @@
       <div id="map" style="height:420px; width:100%;"></div>
     </div>
     <div id="mapStats" style="background:var(--surface); border-radius:var(--radius);
-         padding:13px 16px; box-shadow:var(--shadow); font-size:13px; color:var(--muted);">
-      Seleciona uma campanha para ver os Mupis no mapa
+         padding:13px 16px; box-shadow:var(--shadow); font-size:13px; color:var(--muted); margin-bottom:12px;">
+      Toca em "Calcular rota da semana" para veres as paragens em falta
     </div>
+    <div id="routeResult" style="display:none"></div>
   </div>
 </div>
+
 
 <!-- HOME -->
 <div class="view active" id="view-home">
@@ -511,6 +562,7 @@
       <button class="type-btn active" data-type="digital" onclick="setType('digital', this)">Digitais</button>
       <button class="type-btn" data-type="analog" onclick="setType('analog', this)">Analógicos</button>
     </div>
+    <button class="btn btn-ghost" style="width:100%; margin-bottom:10px;" onclick="openMissingSheet()">📋 O que falta fotografar</button>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="Pesquisar campanha..." oninput="renderCards()">
@@ -524,9 +576,6 @@
     <div class="progress-bar-wrap">
       <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
       <div class="progress-text" id="progressText">0 / 0</div>
-    </div>
-    <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
-      <button class="btn btn-ghost" style="font-size:12px; padding:7px 14px;" onclick="openNewCampaignModal()">+ Nova campanha</button>
     </div>
     <div id="cardList"></div>
   </div>
@@ -547,8 +596,8 @@
     </div>
     <div class="drop-zone" style="margin-bottom:0" onclick="document.getElementById('mapFileInput').click()">
       <div class="drop-icon">📍</div>
-      <div class="drop-title">Mupis</div>
-      <div class="drop-sub">Distribuição semanal</div>
+      <div class="drop-title">Localizações</div>
+      <div class="drop-sub">Rua / Metro / IP</div>
     </div>
   </div>
   <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
@@ -558,6 +607,7 @@
 
   <div class="upload-success" id="uploadSuccess"></div>
   <div class="import-stats" id="importStats"></div>
+  <button class="btn btn-ghost" style="width:100%; margin-bottom:16px;" onclick="openLinkSheet()">🔗 Ligar campanhas aos ficheiros de localizações</button>
 
   <div style="margin-bottom: 16px;">
     <div style="font-size:13px; color:var(--muted); margin-bottom:10px; font-weight:500;">SEMANAS CARREGADAS</div>
@@ -626,68 +676,6 @@
 <div class="toast" id="toast"></div>
 <button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
-<!-- NEW CAMPAIGN MODAL -->
-<div class="modal-overlay" id="newCampaignModal">
-  <div class="modal-box" style="padding-bottom:28px; max-height:90dvh; overflow-y:auto;">
-    <div class="modal-title">Nova Campanha</div>
-    <div class="modal-sub" style="margin-bottom:16px;">Preenche os campos e adiciona à semana activa</div>
-
-    <div style="display:flex; flex-direction:column; gap:12px;">
-      <div>
-        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Nome da campanha</label>
-        <input id="nc_campanha" type="text" class="modal-input" style="font-size:15px; font-weight:500; text-align:left; margin-top:6px;" placeholder="Ex: Sagres">
-      </div>
-      <div>
-        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Nº Venda</label>
-        <input id="nc_venda" type="text" class="modal-input" style="font-size:15px; font-weight:500; text-align:left; margin-top:6px;" placeholder="Ex: V.4500/26 ou SV1">
-      </div>
-      <div>
-        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Suporte</label>
-        <input id="nc_suporte" type="text" class="modal-input" style="font-size:15px; font-weight:500; text-align:left; margin-top:6px;" placeholder="Ex: Digital - Ecrãs TV">
-      </div>
-      <div>
-        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Tipo</label>
-        <div style="display:flex; gap:8px; margin-top:6px;">
-          <button id="nc_type_digital" onclick="setNCType('digital')"
-            style="flex:1; padding:10px; border-radius:var(--radius-sm); border:1.5px solid var(--accent); background:var(--accent); color:#fff; font-size:13px; font-weight:600; cursor:pointer;">
-            Digitais
-          </button>
-          <button id="nc_type_analog" onclick="setNCType('analog')"
-            style="flex:1; padding:10px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--surface); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer;">
-            Analógicos
-          </button>
-        </div>
-      </div>
-      <div>
-        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Nº de fotos</label>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:6px;">
-          <div style="text-align:center;">
-            <div style="font-size:11px; color:var(--accent); font-weight:600; margin-bottom:4px;">RUA</div>
-            <input id="nc_r" type="number" min="0" value="0" class="modal-input" style="font-size:18px; margin-bottom:0;">
-          </div>
-          <div style="text-align:center;">
-            <div style="font-size:11px; color:var(--purple); font-weight:600; margin-bottom:4px;">METRO</div>
-            <input id="nc_m" type="number" min="0" value="0" class="modal-input" style="font-size:18px; margin-bottom:0;">
-          </div>
-          <div style="text-align:center;">
-            <div style="font-size:11px; color:var(--orange); font-weight:600; margin-bottom:4px;">IP</div>
-            <input id="nc_ip" type="number" min="0" value="0" class="modal-input" style="font-size:18px; margin-bottom:0;">
-          </div>
-        </div>
-      </div>
-      <div>
-        <label style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Observações</label>
-        <input id="nc_notas" type="text" class="modal-input" style="font-size:14px; font-weight:400; text-align:left; margin-top:6px;" placeholder="Opcional">
-      </div>
-    </div>
-
-    <div class="modal-btns" style="margin-top:20px;">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeNewCampaignModal()">Cancelar</button>
-      <button class="btn btn-primary" style="flex:2" onclick="confirmNewCampaign()">Adicionar</button>
-    </div>
-  </div>
-</div>
-
 <!-- WEEK MODAL -->
 <div class="modal-overlay" id="weekModal">
   <div class="modal-box">
@@ -703,19 +691,63 @@
   </div>
 </div>
 
+<div class="sheet-overlay" id="missingSheet" onclick="if(event.target===this) closeSheet('missingSheet')">
+  <div class="sheet">
+    <div class="sheet-head"><div class="sheet-title" id="missingTitle">O que falta</div><button class="sheet-close" onclick="closeSheet('missingSheet')">✕</button></div>
+    <div class="sheet-body" id="missingBody"></div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="stationsSheet" onclick="if(event.target===this) closeSheet('stationsSheet')">
+  <div class="sheet">
+    <div class="sheet-head"><div class="sheet-title" id="stationsTitle">Locais</div><button class="sheet-close" onclick="closeSheet('stationsSheet')">✕</button></div>
+    <div class="sheet-body" id="stationsBody"></div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="linkSheet" onclick="if(event.target===this) closeSheet('linkSheet')">
+  <div class="sheet">
+    <div class="sheet-head"><div class="sheet-title" id="linkTitle">Ligar campanhas</div><button class="sheet-close" onclick="closeSheet('linkSheet')">✕</button></div>
+    <div class="sheet-body" id="linkBody"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="locTypeModal">
+  <div class="modal-box">
+    <div class="modal-title">Rede deste ficheiro</div>
+    <div class="modal-sub">A que rede pertencem estas localizações?</div>
+    <div class="btn-row" style="margin-top:0;">
+      <button class="btn btn-primary" style="flex:1" onclick="confirmLocType('rua')">Rua</button>
+      <button class="btn btn-primary" style="flex:1; background:var(--purple)" onclick="confirmLocType('metro')">Metro</button>
+      <button class="btn btn-primary" style="flex:1; background:var(--orange)" onclick="confirmLocType('ip')">IP</button>
+    </div>
+    <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="cancelLocTypeModal()">Cancelar</button>
+  </div>
+</div>
+
 <script>
 var leafletMap = null;
 var mapMarkers = [];
+var startMarker = null;
+var settingStart = false;
+var routeLine = null;
+var routeStopMarkers = [];
 
 // ── STATE ──────────────────────────────────────────────────────
 var state = {
   weeks: {},      // { 'W1': { campaigns: [], loaded: Date } }
   progress: {},   // { 'campaignId': { r: 0, m: 0, ip: 0, done: false } }
   activeWeek: null,
-  activeFilter: 'all',
-  activeSubFilter: 'all',
+  activeStatusFilter: 'all',
+  activeTypeFilter: 'all',
   activeType: 'digital',
   mapData: {},
+  mapVisited: {},   // { "campanha||mupi||lat_lng": true } — pontos já visitados/fotografados
+  routeStart: null, // { lat, lng } — ponto de partida escolhido para a rota
+  locAliases: {},   // { chaveCampanha: [nomes nos ficheiros de localizações] } — ligações memorizadas
+  locIgnore: {},    // { chaveCampanha: true } — campanhas a não ajustar
+  adjOff: {},       // { campaignId: true } — ajustes desfeitos pelo utilizador
+  locFiles: {},     // { semana: { rua: true, metroip: true } } — ficheiros carregados
   currentTab: 'home',
   timestamps: []  // [{ ts, campanha, suporte, type }] — registo de marcações
 };
@@ -727,10 +759,21 @@ function loadState() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) state = JSON.parse(saved);
   } catch(e) {}
+  ensureState();
+  migrateClassification();
+}
+
+function ensureState() {
+  ['weeks', 'progress', 'mapData', 'mapVisited', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
+    if (!state[k] || typeof state[k] !== 'object') state[k] = {};
+  });
+  if (!state.activeStatusFilter) state.activeStatusFilter = 'all';
+  if (!state.activeTypeFilter) state.activeTypeFilter = 'all';
 }
 
 function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e) { showToast('⚠️ Armazenamento cheio — não foi possível guardar'); }
 }
 
 // ── CAMPAIGN ID ────────────────────────────────────────────────
@@ -798,20 +841,50 @@ function cancelWeekModal() {
   _weekModalCallback = null;
 }
 
+// ── LOCATION TYPE MODAL ───────────────────────────────────────
+var _locTypeCallback = null;
+
+function askLocationType(callback) {
+  _locTypeCallback = callback;
+  document.getElementById('locTypeModal').classList.add('show');
+}
+
+function confirmLocType(tipo) {
+  document.getElementById('locTypeModal').classList.remove('show');
+  if (_locTypeCallback) _locTypeCallback(tipo);
+  _locTypeCallback = null;
+}
+
+function cancelLocTypeModal() {
+  document.getElementById('locTypeModal').classList.remove('show');
+  _locTypeCallback = null;
+  try { document.getElementById('mapFileInput').value = ''; } catch(e) {}
+}
+
 function processRows(rows, weekName) {
+
+  // Colunas lidas pelo cabeçalho (não por posição fixa)
+  const cols = detectDigitalColumns(rows);
+  if (cols.error) {
+    showToast('❌ ' + cols.error);
+    document.getElementById('uploadSuccess').style.display = 'block';
+    document.getElementById('uploadSuccess').textContent = '❌ ' + cols.error + ' — nada foi importado';
+    return;
+  }
+  const cell = (row, k) => (k >= 0 && row[k] != null) ? String(row[k]).trim() : '';
 
   const campaigns = [];
   let imported = 0, skipped = 0;
   let svCounter = 0;
 
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = cols.header + 1; i < rows.length; i++) {
     const row = rows[i];
-    let   colA = String(row[0] || '').trim();   // Nº REFERÊNCIA
-    const colD = String(row[3] || '').trim();   // REDE/ISOLADO
-    const colG = String(row[6] || '').trim();   // FORMATO
-    const colI = String(row[8] || '').trim();   // CAMPANHA
-    const colJ = String(row[9] || '').trim();   // Lisboa/Nacional/Porto
-    const colK = String(row[10] || '').trim();  // notas/filtros
+    let   colA = cell(row, cols.ref);        // Nº REFERÊNCIA
+    const colD = cell(row, cols.rede);       // REDE/ISOLADO
+    const colG = cell(row, cols.formato);    // FORMATO
+    const colI = cell(row, cols.campanha);   // CAMPANHA
+    const colJ = cell(row, cols.loc);        // Lisboa/Nacional/Porto
+    const colK = cell(row, cols.notes);      // notas/filtros
 
     // Normalizar V, → V. (vírgula em vez de ponto)
     if (/^V,/i.test(colA)) colA = 'V.' + colA.slice(2);
@@ -840,53 +913,26 @@ function processRows(rows, weekName) {
       colA = `SV${svCounter}`;
     }
 
-    // Calculate photos
-    let r = 0, m = 0, ip = 0, subtype = '';
-    const fmtUp  = colG.toUpperCase();
-    const redeUp = colD.toUpperCase();
-    const ultUp  = colK.toUpperCase();
-
-    if (fmtUp.includes('4X3')) {
-      // 4x3 — sempre rua, 3 fotos
-      r = 3;
-    } else if (fmtUp.includes("LED") && (fmtUp.includes("LED'S") || fmtUp.includes('LEDS') || colG.toLowerCase().includes("led's"))) {
-      // Ecrãs Led's — distinguir Flagship / 4x3 / normal
-      const redeNorm = colD.toUpperCase().replace(/\s/g,'');
-      if (redeNorm.includes('FLAGSHIP') || redeNorm.includes('FLASG')) {
-        // Flagship → 2 fotos rua
-        r = 2; subtype = 'flagship';
-      } else if (redeNorm.includes('4X3') || redeNorm.includes('LED4X3') || colD.toLowerCase().includes('4x3')) {
-        // Led 4x3 → 3 fotos rua
-        r = 3; subtype = '4x3';
-      } else {
-        // Led normal → 4 metro + 2 IP
-        m = 4; ip = 2; subtype = 'leds';
-      }
-    } else if (fmtUp.includes('TV')) {
-      // Ecrãs TV — R+M+IP por defeito, salvo exceções na colK
-      const soRua   = ultUp.includes('SÓ RUA')   || ultUp.includes('SO RUA');
-      const soMetro = ultUp.includes('SÓ METRO')  || ultUp.includes('SO METRO');
-      const semRua  = ultUp.includes('SEM') && ultUp.includes('RUA');
-      if      (soRua)   { r = 2; }
-      else if (soMetro) { m = 2; }
-      else if (semRua)  { m = 2; ip = 2; }
-      else              { r = 2; m = 2; ip = 2; }
-    } else if (fmtUp.includes('3') && (fmtUp.includes('ECRÃ') || fmtUp.includes('ECRA'))) {
-      // Digital – 3 ecrãs — igual ao TV
-      r = 2; m = 2; ip = 2;
-    } else if (fmtUp.includes('TOMI') || colG.toLowerCase() === 'tomi') {
-      // Tomi — sempre 1 foto metro
-      m = 1;
-    }
+    // Tipo de suporte e fotos — regra única
+    const cls = classifyDigital(colG, colD, colK, colI);
+    const { r, m, ip, subtype, tipo } = cls;
 
     const notas = (colK && !colK.toUpperCase().includes('CONTINUA') &&
                    !colK.toUpperCase().includes('BRANDSTORE')) ? colK : '';
 
-    campaigns.push({ venda: colA, campanha: colI, suporte: colG, rede: colD, subtype, notas, r, m, ip });
+    campaigns.push({ venda: colA, campanha: colI, suporte: colG, rede: colD, subtype, tipo, notas, r, m, ip });
     imported++;
   }
 
-  state.weeks[weekName] = { campaigns, loaded: new Date().toLocaleDateString('pt') };
+  // Juntar com analógicos já carregados nesta semana (não substituir a semana toda)
+  if (!state.weeks[weekName]) {
+    state.weeks[weekName] = { campaigns: [], loaded: new Date().toLocaleDateString('pt') };
+  }
+  state.weeks[weekName].campaigns = [
+    ...state.weeks[weekName].campaigns.filter(c => c.subtype === 'analog'),
+    ...campaigns
+  ];
+  state.weeks[weekName].loaded = new Date().toLocaleDateString('pt');
   state.activeWeek = weekName;
   saveState();
 
@@ -909,6 +955,10 @@ function processRows(rows, weekName) {
     <div class="stat-row">
       <span class="stat-label">Ignoradas (Porto/Cont./Brand.)</span>
       <span class="stat-value red">${skipped}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Colunas lidas</span>
+      <span class="stat-value" style="font-size:11px">Ref ${colLetter(cols.ref)} · Rede ${colLetter(cols.rede)} · Formato ${colLetter(cols.formato)} · Campanha ${colLetter(cols.campanha)}${cols.loc >= 0 ? ' · Local. ' + colLetter(cols.loc) : ''}</span>
     </div>
   `;
 
@@ -1030,8 +1080,8 @@ function renderWeekSelector() {
 
 function selectWeek(w) {
   state.activeWeek = w;
-  state.activeFilter = 'all';
-  state.activeSubFilter = 'all';
+  state.activeStatusFilter = 'all';
+  state.activeTypeFilter = 'all';
   document.getElementById('currentWeekBadge').textContent = w;
   renderWeekSelector();
   // Sincronizar toggle visual
@@ -1046,45 +1096,44 @@ function renderFilterBar() {
   const sub = document.getElementById('filterBarSub');
   const isAnalog = state.activeType === 'analog';
 
-  // Linha 1 — sempre visível: estado
+  // Linha 1 — estado (Todas / Por fazer / Concluídas)
   let mainBtns = `
-    <button class="filter-btn" onclick="setFilter('all', this)">Todas</button>
-    <button class="filter-btn" onclick="setFilter('pending', this)">Por fazer</button>
-    <button class="filter-btn" onclick="setFilter('done', this)">Concluídas</button>
+    <button class="filter-btn" onclick="setFilter('all', this, 'status')">Todas</button>
+    <button class="filter-btn" onclick="setFilter('pending', this, 'status')">Por fazer</button>
+    <button class="filter-btn" onclick="setFilter('done', this, 'status')">Concluídas</button>
   `;
   bar.innerHTML = mainBtns;
 
-  // Linha 2 — filtros de suporte
-  let subBtns = '';
-  if (!isAnalog) subBtns = `
-    <button class="filter-btn" onclick="setFilter('tv', this)">Ecrãs TV</button>
-    <button class="filter-btn" onclick="setFilter('leds', this)">Led's</button>
-    <button class="filter-btn" onclick="setFilter('4x3', this)">Led 4x3</button>
-    <button class="filter-btn" onclick="setFilter('flagship', this)">Flagship</button>
-    <button class="filter-btn" onclick="setFilter('tomi', this)">Tomi</button>
-    <button class="filter-btn" onclick="setFilter('3ecras', this)">3 Ecrãs</button>
+  // Linha 2 — tipo de suporte (combina-se com a linha 1)
+  let subBtns = `<button class="filter-btn" onclick="setFilter('all', this, 'type')">Todos os suportes</button>`;
+  if (!isAnalog) subBtns += `
+    <button class="filter-btn" onclick="setFilter('tv', this, 'type')">Ecrãs TV</button>
+    <button class="filter-btn" onclick="setFilter('leds', this, 'type')">Led's</button>
+    <button class="filter-btn" onclick="setFilter('4x3', this, 'type')">Led 4x3</button>
+    <button class="filter-btn" onclick="setFilter('flagship', this, 'type')">Flagship</button>
+    <button class="filter-btn" onclick="setFilter('tomi', this, 'type')">Tomi</button>
+    <button class="filter-btn" onclick="setFilter('3ecras', this, 'type')">3 Ecrãs</button>
   `;
-  if (isAnalog) subBtns = `
-    <button class="filter-btn" onclick="setFilter('mupis', this)">Mupis</button>
-    <button class="filter-btn" onclick="setFilter('ppa', this)">PPA</button>
-    <button class="filter-btn" onclick="setFilter('8x3', this)">8x3</button>
-    <button class="filter-btn" onclick="setFilter('paredes', this)">Paredes</button>
-    <button class="filter-btn" onclick="setFilter('atm', this)">ATM</button>
-    <button class="filter-btn" onclick="setFilter('4plus', this)">4Plus</button>
-    <button class="filter-btn" onclick="setFilter('transportes', this)">Transportes</button>
-    <button class="filter-btn" onclick="setFilter('flashes', this)">Flashes</button>
+  if (isAnalog) subBtns += `
+    <button class="filter-btn" onclick="setFilter('mupis', this, 'type')">Mupis</button>
+    <button class="filter-btn" onclick="setFilter('ppa', this, 'type')">PPA</button>
+    <button class="filter-btn" onclick="setFilter('8x3', this, 'type')">8x3</button>
+    <button class="filter-btn" onclick="setFilter('paredes', this, 'type')">Paredes</button>
+    <button class="filter-btn" onclick="setFilter('atm', this, 'type')">ATM</button>
+    <button class="filter-btn" onclick="setFilter('4plus', this, 'type')">4Plus</button>
+    <button class="filter-btn" onclick="setFilter('transportes', this, 'type')">Transportes</button>
+    <button class="filter-btn" onclick="setFilter('flashes', this, 'type')">Flashes</button>
   `;
   sub.innerHTML = subBtns;
 
-  // Reactivar filtros activos nas duas barras independentemente
-  const activeMain = bar.querySelector(`[onclick="setFilter('${state.activeFilter}', this)"]`);
-  if (activeMain) activeMain.classList.add('active');
-  else { bar.querySelector('.filter-btn').classList.add('active'); state.activeFilter = 'all'; }
+  // Reativar, em cada barra, o botão correspondente ao filtro guardado
+  const statusBtn = bar.querySelector(`[onclick="setFilter('${state.activeStatusFilter}', this, 'status')"]`);
+  if (statusBtn) statusBtn.classList.add('active');
+  else { bar.querySelector('.filter-btn').classList.add('active'); state.activeStatusFilter = 'all'; }
 
-  if (state.activeSubFilter && state.activeSubFilter !== 'all') {
-    const activeSub = sub.querySelector(`[onclick="setFilter('${state.activeSubFilter}', this)"]`);
-    if (activeSub) activeSub.classList.add('active');
-  }
+  const typeBtn = sub.querySelector(`[onclick="setFilter('${state.activeTypeFilter}', this, 'type')"]`);
+  if (typeBtn) typeBtn.classList.add('active');
+  else { sub.querySelector('.filter-btn').classList.add('active'); state.activeTypeFilter = 'all'; }
 }
 
 // ── SUPORTE LABEL ─────────────────────────────────────────────
@@ -1107,8 +1156,7 @@ function syncTypeToggle() {
 
 function setType(type, btn) {
   state.activeType = type;
-  state.activeFilter = 'all';
-  state.activeSubFilter = 'all';
+  state.activeTypeFilter = 'all';
   document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderFilterBar();
@@ -1116,15 +1164,11 @@ function setType(type, btn) {
   saveState();
 }
 
-function setFilter(f, btn) {
-  const statusFilters = ['all', 'pending', 'done'];
-  if (statusFilters.includes(f)) {
-    state.activeFilter = f;
-    document.querySelectorAll('#filterBar .filter-btn').forEach(b => b.classList.remove('active'));
-  } else {
-    state.activeSubFilter = f;
-    document.querySelectorAll('#filterBarSub .filter-btn').forEach(b => b.classList.remove('active'));
-  }
+function setFilter(f, btn, kind) {
+  if (kind === 'type') state.activeTypeFilter = f;
+  else state.activeStatusFilter = f;
+  const container = kind === 'type' ? document.getElementById('filterBarSub') : document.getElementById('filterBar');
+  container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderCards();
 }
@@ -1135,7 +1179,8 @@ function renderCards() {
 
   const campaigns = state.weeks[state.activeWeek].campaigns;
   const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
-  const filter = state.activeFilter;
+  const statusFilter = state.activeStatusFilter;
+  const typeFilter = state.activeTypeFilter;
 
   let filtered = campaigns.filter(c => {
     // Filtrar por tipo (digital vs analógico)
@@ -1150,27 +1195,12 @@ function renderCards() {
     if (search && !c.campanha.toLowerCase().includes(search) &&
         !c.venda.toLowerCase().includes(search)) return false;
 
-    // Filtro de estado (linha 1)
-    if (filter === 'pending' && done) return false;
-    if (filter === 'done' && !done) return false;
+    // Filtro de estado
+    if (statusFilter === 'pending' && done) return false;
+    if (statusFilter === 'done' && !done) return false;
 
-    // Filtro de suporte (linha 2) — cumulativo com o de estado
-    const sub = state.activeSubFilter || 'all';
-    if (sub === '4x3' && c.subtype !== '4x3') return false;
-    if (sub === 'flagship' && c.subtype !== 'flagship') return false;
-    if (sub === 'tv' && !c.suporte.toUpperCase().includes('TV')) return false;
-    if (sub === 'leds' && c.subtype !== 'leds') return false;
-    if (sub === 'tomi' && !c.suporte.toLowerCase().includes('tomi')) return false;
-    if (sub === 'analog' && c.subtype !== 'analog') return false;
-    if (sub === 'mupis' && !c.suporte.toUpperCase().includes('MUPI')) return false;
-    if (sub === 'ppa' && !c.suporte.toUpperCase().includes('PPA')) return false;
-    if (sub === '8x3' && !c.suporte.toUpperCase().includes('8X3')) return false;
-    if (sub === 'paredes' && !c.suporte.toUpperCase().includes('PARED')) return false;
-    if (sub === 'atm' && !c.suporte.toUpperCase().includes('ATM')) return false;
-    if (sub === '4plus' && !c.suporte.toUpperCase().replace(/\s/g,'').includes('4PLUS') && !c.suporte.includes('(4x1')) return false;
-    if (sub === 'transportes' && !['ELÉT','ELET','RI AUTO','CARRIS','STCP'].some(x => c.suporte.toUpperCase().includes(x))) return false;
-    if (sub === 'flashes' && !c.suporte.toUpperCase().includes('FLASH')) return false;
-    if (sub === '3ecras' && !c.suporte.toLowerCase().includes('3 ecr') && !c.suporte.toLowerCase().includes('3ecr')) return false;
+    // Filtro de tipo de suporte (combina com o de estado)
+    if (!matchesTypeFilter(c, typeFilter)) return false;
 
     return true;
   });
@@ -1208,6 +1238,18 @@ function renderCards() {
     if (c.m > 0) counters.push(buildCounter(id, 'm', p.m, c.m, 'MT'));
     if (c.ip > 0) counters.push(buildCounter(id, 'ip', p.ip, c.ip, 'IP'));
 
+    // Ajuste automático (confronto com os ficheiros de localizações) + botão Locais
+    let adjHtml = '';
+    const zonesAdj = c.adj ? [c.adj.r && 'Rua', c.adj.m && 'Metro', c.adj.ip && 'IP'].filter(Boolean) : [];
+    if (zonesAdj.length) {
+      adjHtml = `<div class="adj-badge">⚙️ Ajustado: sem ${zonesAdj.join('/')} nos ficheiros<button onclick="revertAdjustment(event,'${id}')">repor</button></div>`;
+    } else if (isMupi(c) && (state.adjOff || {})[id]) {
+      adjHtml = `<div class="adj-badge">Ajuste desativado<button onclick="reapplyAdjustment(event,'${id}')">reaplicar</button></div>`;
+    }
+    const locHtml = isMupi(c)
+      ? `<div style="padding:0 16px 8px 49px;"><button class="loc-btn" onclick="openStations('${id}')">🚉 Locais</button></div>`
+      : '';
+
     return `
       <div class="card ${isDone ? 'done' : ''}" id="card_${id}">
         <div class="card-header" onclick="toggleCard('${id}', ${c.r}, ${c.m}, ${c.ip})">
@@ -1215,7 +1257,7 @@ function renderCards() {
             <span class="card-check-icon">✓</span>
           </div>
           <div class="card-info">
-            <div class="card-name"><input class="editable" value="${(c.campanha || '—').replace(/"/g, '&quot;')}" onclick="event.stopPropagation()" onchange="editField(event,'${id}','campanha')"></div>
+            <div class="card-name">${c.campanha || '—'}</div>
             <div class="card-meta">
               <span class="tag">${c.venda}</span>
               <span class="tag">${suporteLabel(c)}</span>
@@ -1225,7 +1267,9 @@ function renderCards() {
         </div>
         ${counters.length ? `<div class="card-photos">${counters.join('')}</div>` : ''}
         ${c.rede ? `<div class="card-notes" style="color:var(--muted)">📍 ${c.rede}</div>` : ''}
-        <div class="card-notes">📌 <input class="editable" style="color:var(--orange)" value="${(c.notas||'').replace(/"/g,'&quot;')}" placeholder="Observações..." onclick="event.stopPropagation()" onchange="editField(event,'${id}','notas')"></div>
+        ${c.notas ? `<div class="card-notes">📌 ${c.notas}</div>` : ''}
+        ${adjHtml}
+        ${locHtml}
         <div style="padding:0 16px 10px 49px;">
           <button onclick="deleteCampaign(event,'${id}')" style="font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:0; font-weight:500;">🗑 Apagar campanha</button>
         </div>
@@ -1244,7 +1288,7 @@ function buildCounter(id, type, current, target, label) {
         <div class="counter-val ${isDone ? 'done' : ''}" id="cv_${id}_${type}">${current}</div>
         <button class="counter-btn" onclick="changeCount(event,'${id}','${type}',1)">+</button>
       </div>
-      <span class="counter-total">/<span class="counter-target" contenteditable="true" onclick="event.stopPropagation()" onblur="editTarget(event,'${id}','${type}')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${target}</span></span>
+      <span class="counter-total">/${target}</span>
     </div>
   `;
 }
@@ -1307,89 +1351,6 @@ function toggleDone(e, id, r, m, ip) {
 
 function toggleCard(id, r, m, ip) {
   // Just visual expand — handled by the counters
-}
-
-// ── NEW CAMPAIGN MODAL ────────────────────────────────────────
-var _ncType = 'digital';
-
-function openNewCampaignModal() {
-  if (!state.activeWeek) { showToast('Selecciona uma semana primeiro'); return; }
-  _ncType = state.activeType;
-  document.getElementById('nc_campanha').value = '';
-  document.getElementById('nc_venda').value = '';
-  document.getElementById('nc_suporte').value = '';
-  document.getElementById('nc_r').value = '0';
-  document.getElementById('nc_m').value = '0';
-  document.getElementById('nc_ip').value = '0';
-  document.getElementById('nc_notas').value = '';
-  setNCType(_ncType);
-  document.getElementById('newCampaignModal').classList.add('show');
-  setTimeout(() => document.getElementById('nc_campanha').focus(), 300);
-}
-
-function closeNewCampaignModal() {
-  document.getElementById('newCampaignModal').classList.remove('show');
-}
-
-function setNCType(type) {
-  _ncType = type;
-  const dBtn = document.getElementById('nc_type_digital');
-  const aBtn = document.getElementById('nc_type_analog');
-  dBtn.style.background = type === 'digital' ? 'var(--accent)' : 'var(--surface)';
-  dBtn.style.color = type === 'digital' ? '#fff' : 'var(--muted)';
-  dBtn.style.borderColor = type === 'digital' ? 'var(--accent)' : 'var(--border)';
-  aBtn.style.background = type === 'analog' ? 'var(--accent)' : 'var(--surface)';
-  aBtn.style.color = type === 'analog' ? '#fff' : 'var(--muted)';
-  aBtn.style.borderColor = type === 'analog' ? 'var(--accent)' : 'var(--border)';
-}
-
-function confirmNewCampaign() {
-  const campanha = document.getElementById('nc_campanha').value.trim();
-  const venda    = document.getElementById('nc_venda').value.trim() || 'SV';
-  const suporte  = document.getElementById('nc_suporte').value.trim();
-  const r  = parseInt(document.getElementById('nc_r').value) || 0;
-  const m  = parseInt(document.getElementById('nc_m').value) || 0;
-  const ip = parseInt(document.getElementById('nc_ip').value) || 0;
-  const notas = document.getElementById('nc_notas').value.trim();
-
-  if (!campanha) { showToast('Introduz o nome da campanha'); return; }
-  if (!suporte)  { showToast('Introduz o suporte'); return; }
-
-  const newC = {
-    venda, campanha, suporte, rede: '',
-    subtype: _ncType === 'analog' ? 'analog' : '',
-    notas, r, m, ip
-  };
-
-  state.weeks[state.activeWeek].campaigns.push(newC);
-  saveState();
-  closeNewCampaignModal();
-  renderCards();
-  renderHome();
-  showToast(`✓ ${campanha} adicionada`);
-}
-
-function editField(event, id, field) {
-  const val = event.target.value.trim();
-  const campaign = findCampaign(id);
-  if (!campaign) return;
-  campaign[field] = val;
-  saveState();
-}
-
-function editTarget(event, id, type) {
-  const val = parseInt(event.target.textContent.trim());
-  if (isNaN(val) || val < 0) { event.target.textContent = '0'; return; }
-  const campaign = findCampaign(id);
-  if (!campaign) return;
-  campaign[type] = val;
-  // Update counter val done state
-  const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-  const valEl = document.getElementById(`cv_${id}_${type}`);
-  if (valEl) valEl.classList.toggle('done', (p[type] || 0) >= val);
-  saveState();
-  updateCardDone(id);
-  updateProgress();
 }
 
 function deleteCampaign(e, id) {
@@ -1628,7 +1589,8 @@ function toggleArchiveWeek(w) {
 
 function clearAllData() {
   if (!confirm('Apagar todos os dados? Esta ação não pode ser revertida.')) return;
-  state = { weeks: {}, progress: {}, activeWeek: null, activeFilter: 'all', currentTab: 'home' };
+  state = { weeks: {}, progress: {}, activeWeek: null, activeStatusFilter: 'all', activeTypeFilter: 'all', currentTab: 'home' };
+  ensureState();
   saveState();
   renderAll();
   document.getElementById('importStats').style.display = 'none';
@@ -1737,6 +1699,7 @@ function processAnalogRows(rows, weekName) {
       suporte: formato.split('\n')[0].split('/')[0].trim(),
       subtype: 'analog',
       notas: '',
+      base: { r, m, ip },
       r, m, ip
     });
     imported++;
@@ -1752,6 +1715,7 @@ function processAnalogRows(rows, weekName) {
     ...campaigns
   ];
   state.activeWeek = weekName;
+  applyLocationAdjustments(weekName);
   saveState();
 
   document.getElementById('uploadSuccess').style.display = 'block';
@@ -1776,6 +1740,7 @@ function processAnalogRows(rows, weekName) {
   `;
 
   renderAll();
+  setTimeout(() => maybePromptLinking(weekName), 300);
   showToast(`✓ ${imported} analógicos carregados`);
 }
 
@@ -1788,7 +1753,13 @@ function exportProgress() {
     progress: state.progress,
     activeWeek: state.activeWeek,
     activeType: state.activeType,
-    mapData: state.mapData || {}
+    mapData: state.mapData || {},
+    mapVisited: state.mapVisited || {},
+    routeStart: state.routeStart || null,
+    locAliases: state.locAliases || {},
+    locIgnore: state.locIgnore || {},
+    adjOff: state.adjOff || {},
+    locFiles: state.locFiles || {}
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1815,7 +1786,13 @@ function importProgress(file) {
       if (data.progress) state.progress = { ...state.progress, ...data.progress };
       if (data.activeWeek) state.activeWeek = data.activeWeek;
       if (data.activeType) state.activeType = data.activeType;
-      if (data.mapData) state.mapData = data.mapData;
+      if (data.mapData) state.mapData = { ...(state.mapData || {}), ...data.mapData };
+      if (data.mapVisited) state.mapVisited = { ...(state.mapVisited || {}), ...data.mapVisited };
+      if (data.routeStart) state.routeStart = data.routeStart;
+      if (data.locAliases) state.locAliases = { ...(state.locAliases || {}), ...data.locAliases };
+      if (data.locIgnore) state.locIgnore = { ...(state.locIgnore || {}), ...data.locIgnore };
+      if (data.adjOff) state.adjOff = { ...(state.adjOff || {}), ...data.adjOff };
+      if (data.locFiles) state.locFiles = { ...(state.locFiles || {}), ...data.locFiles };
       saveState();
       renderAll();
       showToast('✓ Progresso importado');
@@ -1829,115 +1806,679 @@ function importProgress(file) {
 }
 
 // ── MAP ────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// UTILITÁRIOS
+// ══════════════════════════════════════════════════════════════
+function normTxt(s) {
+  return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+}
+function normKey(s) { return normTxt(s).replace(/[^A-Z0-9]+/g, ''); }
+function colLetter(i) {
+  let s = ''; i = i + 1;
+  while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); }
+  return s;
+}
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function openSheet(id) { document.getElementById(id).classList.add('show'); }
+function closeSheet(id) { document.getElementById(id).classList.remove('show'); }
+
+// ══════════════════════════════════════════════════════════════
+// CLASSIFICAÇÃO ÚNICA DOS SUPORTES DIGITAIS
+// (usada na importação, na migração, nos filtros e nas etiquetas)
+// ══════════════════════════════════════════════════════════════
+function classifyDigital(formato, rede, notas, campanha) {
+  const f  = normTxt(formato);
+  const rd = normTxt(rede).replace(/\s/g, '');
+  const nt = normTxt(notas);
+  let tipo = '', r = 0, m = 0, ip = 0;
+
+  if (f.includes('4X3')) {
+    tipo = '4x3'; r = 3;
+  } else if (f.includes('FLAGSHIP')) {
+    tipo = 'flagship'; r = 2;
+  } else if (f.includes('LED')) {
+    // Ecrãs Led's — a rede distingue Flagship / 4x3 / normal
+    if (rd.includes('FLAGSHIP') || rd.includes('FLASG')) { tipo = 'flagship'; r = 2; }
+    else if (rd.includes('4X3'))                         { tipo = '4x3';      r = 3; }
+    else                                                 { tipo = 'leds';     m = 4; ip = 2; }
+  } else if (f.includes('3') && f.includes('ECRA')) {
+    // 3 Ecrãs — sempre 3 fotos de Metro
+    tipo = '3ecras'; m = 3;
+  } else if (f.includes('TV')) {
+    tipo = 'tv';
+    if (/\bTVI\b/.test(normTxt(campanha))) {
+      // Campanha TVI — sempre 2 Metro + 2 IP, sem Rua
+      m = 2; ip = 2;
+    } else {
+      const soRua   = nt.includes('SO RUA');
+      const soMetro = nt.includes('SO METRO');
+      const semRua  = nt.includes('SEM') && nt.includes('RUA');
+      if      (soRua)   { r = 2; }
+      else if (soMetro) { m = 2; }
+      else if (semRua)  { m = 2; ip = 2; }
+      else              { r = 2; m = 2; ip = 2; }
+    }
+  } else if (f.includes('TOMI')) {
+    tipo = 'tomi'; m = 1;
+  }
+  const subtype = (tipo === '4x3' || tipo === 'flagship' || tipo === 'leds') ? tipo : '';
+  return { tipo, subtype, r, m, ip };
+}
+
+// Corrige campanhas já guardadas (tipo + quantidades pelas regras atuais)
+function migrateClassification() {
+  let changed = false;
+  Object.values(state.weeks || {}).forEach(w => {
+    (w.campaigns || []).forEach(c => {
+      if (c.subtype === 'analog') return;
+      const k = classifyDigital(c.suporte, c.rede, c.notas, c.campanha);
+      if (!k.tipo) return; // formato não reconhecido (ex.: colunas lidas mal) → não mexer
+      if (c.tipo !== k.tipo || (c.subtype || '') !== k.subtype || c.r !== k.r || c.m !== k.m || c.ip !== k.ip) {
+        c.tipo = k.tipo; c.subtype = k.subtype; c.r = k.r; c.m = k.m; c.ip = k.ip;
+        changed = true;
+      }
+    });
+  });
+  if (changed) saveState();
+}
+
+// Filtro por tipo de suporte (digitais: tipo guardado; analógicos: texto do suporte)
+var DIG_TYPES = [['tv', 'Ecrãs TV'], ['leds', "Led's"], ['4x3', 'Led 4x3'], ['flagship', 'Flagship'], ['tomi', 'Tomi'], ['3ecras', '3 Ecrãs']];
+var AN_TYPES  = [['mupis', 'Mupis'], ['ppa', 'PPA'], ['8x3', '8x3'], ['paredes', 'Paredes'], ['atm', 'ATM'], ['4plus', '4Plus'], ['transportes', 'Transportes'], ['flashes', 'Flashes']];
+
+function matchesTypeFilter(c, f) {
+  if (!f || f === 'all') return true;
+  if (c.subtype !== 'analog') {
+    const t = c.tipo || classifyDigital(c.suporte, c.rede, c.notas, c.campanha).tipo;
+    return t === f;
+  }
+  const s = (c.suporte || '').toUpperCase();
+  switch (f) {
+    case 'mupis':       return s.includes('MUPI');
+    case 'ppa':         return s.includes('PPA');
+    case '8x3':         return s.includes('8X3');
+    case 'paredes':     return s.includes('PARED');
+    case 'atm':         return s.includes('ATM');
+    case '4plus':       return s.replace(/\s/g, '').includes('4PLUS') || (c.suporte || '').includes('(4x1');
+    case 'transportes': return ['ELÉT', 'ELET', 'RI AUTO', 'CARRIS', 'STCP'].some(x => s.includes(x));
+    case 'flashes':     return s.includes('FLASH');
+    default:            return true;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// LEITURA DAS COLUNAS PELO CABEÇALHO (digitais)
+// ══════════════════════════════════════════════════════════════
+function detectDigitalColumns(rows) {
+  let hi = -1;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const cells = (rows[i] || []).map(c => normTxt(c).trim());
+    if (cells.includes('FORMATO') && cells.includes('CAMPANHA')) { hi = i; break; }
+  }
+  if (hi < 0) return { error: 'Não encontrei a linha de cabeçalhos (Formato / Campanha)' };
+
+  const hdr = rows[hi].map(h => normTxt(h).replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim());
+  const find = pred => hdr.findIndex(pred);
+  const cols = {
+    header:   hi,
+    ref:      find(h => h.includes('REFERENCIA')),
+    rede:     find(h => h.startsWith('REDE')),
+    formato:  find(h => h === 'FORMATO'),
+    campanha: find(h => h === 'CAMPANHA')
+  };
+  const missing = [['ref', 'Nº Referência'], ['rede', 'Rede/Isolado'], ['formato', 'Formato'], ['campanha', 'Campanha']]
+    .filter(([k]) => cols[k] < 0).map(([, n]) => n);
+  if (missing.length) return { error: 'Faltam colunas: ' + missing.join(', ') };
+
+  // Localização (Lisboa/Nacional/Porto) = coluna a seguir à Campanha, confirmada pelo conteúdo
+  const body = rows.slice(hi + 1);
+  const LOC = new Set(['LISBOA', 'NACIONAL', 'PORTO']);
+  cols.loc = -1;
+  for (let k = cols.campanha + 1; k <= cols.campanha + 3; k++) {
+    const vals = body.map(r => normTxt(r[k]).trim()).filter(Boolean);
+    if (vals.length && vals.filter(v => LOC.has(v)).length / vals.length >= 0.6) { cols.loc = k; break; }
+  }
+  cols.notes = cols.loc >= 0 ? cols.loc + 1 : cols.campanha + 1;
+  return cols;
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOCALIZAÇÕES POR SEMANA + LIGAÇÃO DE CAMPANHAS (Mupis analógicos)
+// ══════════════════════════════════════════════════════════════
+function isMupi(c) { return c.subtype === 'analog' && /MUPI/i.test(c.suporte || ''); }
+function hasCoords(e) {
+  return typeof e.lat === 'number' && !isNaN(e.lat) && typeof e.lng === 'number' && !isNaN(e.lng);
+}
+
+// nome da campanha (nos ficheiros de localizações) -> entradas dessa semana
+function locEntriesByName(week) {
+  const out = {};
+  Object.keys(state.mapData || {}).forEach(name => {
+    const arr = (state.mapData[name] || []).filter(e => e.week === week);
+    if (arr.length) out[name] = arr;
+  });
+  return out;
+}
+// nome -> em que ficheiros aparece (rua / metro / ip)
+function locPresence(week) {
+  const out = {}, by = locEntriesByName(week);
+  Object.keys(by).forEach(n => {
+    const p = { rua: false, metro: false, ip: false };
+    by[n].forEach(e => { p[e.tipo || 'rua'] = true; });
+    out[n] = p;
+  });
+  return out;
+}
+
+// "Bolt 30set'26" → "Bolt" ; "MC Donalds EURO POUPANÇA 4 TEMAS 30set'26" → "MC Donalds EURO POUPANÇA"
+function cleanCampaignName(name) {
+  let s = String(name || '');
+  s = s.replace(/\d{1,2}\s*(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zç]*\s*['’`´]?\s*\d{2,4}.*$/i, '');
+  s = s.replace(/\([^)]*\)/g, ' ');
+  s = s.replace(/\b\d+\s*temas?\b.*$/i, '');
+  return s.trim();
+}
+function nameTokens(s) { return normTxt(s).split(/[^A-Z0-9]+/).filter(Boolean); }
+function cleanKey(name) { return nameTokens(cleanCampaignName(name)).join(''); }
+
+function weekMupiCampaigns(week) {
+  return ((state.weeks[week] || {}).campaigns || []).filter(isMupi);
+}
+
+// Ligações automáticas inequívocas: o nome do ficheiro de localizações
+// coincide com uma sequência de palavras do nome da campanha.
+function autoLinkMap(week) {
+  const present = Object.keys(locEntriesByName(week));
+  const keys = {};
+  weekMupiCampaigns(week).forEach(c => {
+    const k = cleanKey(c.campanha);
+    if (k && !keys[k]) keys[k] = nameTokens(cleanCampaignName(c.campanha));
+  });
+  const out = {};
+  present.forEach(L => {
+    const lk = normKey(L);
+    if (lk.length < 3) return;
+    const matches = Object.keys(keys).filter(k => {
+      const toks = keys[k];
+      for (let i = 0; i < toks.length; i++) {
+        let acc = '';
+        for (let j = i; j < toks.length; j++) {
+          acc += toks[j];
+          if (acc === lk) return true;
+          if (acc.length > lk.length) break;
+        }
+      }
+      return false;
+    });
+    if (matches.length === 1) (out[matches[0]] = out[matches[0]] || []).push(L);
+  });
+  return out;
+}
+
+function linkedNamesFor(c, week) {
+  const key = cleanKey(c.campanha);
+  if ((state.locIgnore || {})[key]) return [];
+  const present = new Set(Object.keys(locEntriesByName(week)));
+  const out = new Set();
+  ((state.locAliases || {})[key] || []).forEach(n => { if (present.has(n)) out.add(n); });
+  (autoLinkMap(week)[key] || []).forEach(n => out.add(n));
+  return [...out];
+}
+
+// Confronta cada Mupi analógico com os ficheiros de localizações da semana
+// e ajusta as fotos (a partir das quantidades base). Sem ligação → não altera.
+function applyLocationAdjustments(week) {
+  const w = state.weeks[week];
+  if (!w) return;
+  const files = (state.locFiles || {})[week] || {};
+  const pres = locPresence(week);
+  w.campaigns.forEach(c => {
+    if (!isMupi(c)) return;
+    if (!c.base) c.base = { r: c.r, m: c.m, ip: c.ip };
+    const id = campaignId(c);
+    let r = c.base.r, m = c.base.m, ip = c.base.ip;
+    c.adj = null;
+    if (!(state.adjOff || {})[id] && (files.rua || files.metroip)) {
+      const names = linkedNamesFor(c, week);
+      if (names.length) {
+        const has = { rua: false, metro: false, ip: false };
+        names.forEach(n => {
+          const p = pres[n];
+          if (p) { has.rua = has.rua || p.rua; has.metro = has.metro || p.metro; has.ip = has.ip || p.ip; }
+        });
+        const adj = {};
+        if (files.rua     && !has.rua   && r  > 0) { r  = 0; adj.r  = true; }
+        if (files.metroip && !has.metro && m  > 0) { m  = 0; adj.m  = true; }
+        if (files.metroip && !has.ip    && ip > 0) { ip = 0; adj.ip = true; }
+        if (Object.keys(adj).length) c.adj = adj;
+      }
+    }
+    c.r = r; c.m = m; c.ip = ip;
+  });
+  saveState();
+}
+
+function revertAdjustment(e, id) {
+  e.stopPropagation();
+  state.adjOff[id] = true;
+  applyLocationAdjustments(state.activeWeek);
+  renderCards();
+  showToast('Ajuste desfeito');
+}
+function reapplyAdjustment(e, id) {
+  e.stopPropagation();
+  delete state.adjOff[id];
+  applyLocationAdjustments(state.activeWeek);
+  renderCards();
+  showToast('Ajuste reaplicado');
+}
+
+function pendingLinkCount(week) {
+  const seen = {};
+  let n = 0;
+  weekMupiCampaigns(week).forEach(c => {
+    const k = cleanKey(c.campanha);
+    if (!k || seen[k]) return;
+    seen[k] = true;
+    if (state.locIgnore[k]) return;
+    if (!linkedNamesFor(c, week).length) n++;
+  });
+  return n;
+}
+function maybePromptLinking(week) {
+  const files = (state.locFiles || {})[week] || {};
+  if (!(files.rua || files.metroip)) return;
+  if (state.activeWeek !== week) return;
+  if (pendingLinkCount(week) > 0) openLinkSheet();
+}
+
+// Pool de localizações (com coordenadas) de uma campanha — usado no mapa/rota
+function poolForCampaign(name) {
+  const w = state.activeWeek;
+  const camp = ((state.weeks[w] || {}).campaigns || []).find(c => isMupi(c) && c.campanha === name);
+  if (camp) {
+    const names = linkedNamesFor(camp, w);
+    if (names.length) {
+      const by = locEntriesByName(w);
+      return names.flatMap(n => by[n] || []).filter(hasCoords);
+    }
+  }
+  return findMapPool(name);
+}
+
+// ══════════════════════════════════════════════════════════════
+// IMPORTAÇÃO DOS FICHEIROS DE LOCALIZAÇÕES (Rua e Metro/IP)
+// ══════════════════════════════════════════════════════════════
 function handleMapFile(file) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, { type: 'array' });
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      processMapRows(rows);
-    } catch(err) {
+      processLocationFile(rows, file.name);
+    } catch (err) {
       console.error(err);
       showToast('❌ Erro ao ler o ficheiro: ' + err.message);
     }
+    try { document.getElementById('mapFileInput').value = ''; } catch (e2) {}
   };
   reader.onerror = () => showToast('❌ Erro ao ler o ficheiro');
   reader.readAsArrayBuffer(file);
 }
 
-function processMapRows(rows) {
-  const campanhas = {};
-  const header = rows[0] || [];
-
-  // 1. Coluna de campanha — tem '|' nos dados
-  let campCol = -1;
-  for (let r = 1; r < Math.min(10, rows.length); r++) {
-    for (let i = (rows[r] || []).length - 1; i >= 0; i--) {
-      if (String(rows[r][i] || '').includes('|')) { campCol = i; break; }
-    }
-    if (campCol !== -1) break;
+function processLocationFile(rows, fileName) {
+  // 1. Cabeçalho (procura a coluna de morada/estação)
+  let hi = -1;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const cells = (rows[i] || []).map(c => normTxt(c).trim());
+    if (cells.some(c => c.startsWith('ENDERECO'))) { hi = i; break; }
   }
-  if (campCol === -1) { showToast('❌ Coluna de campanhas não encontrada'); return; }
+  if (hi < 0) { showToast('❌ Não encontrei a coluna de morada/estação (Endereço)'); return; }
+  const hdr = rows[hi].map(c => normTxt(c).trim());
+  const idx = pred => hdr.findIndex(pred);
+  const iPrim = idx(h => h.startsWith('PRIMARIO'));
+  const iDesc = idx(h => h.startsWith('DESC'));
+  const iMor  = idx(h => h.startsWith('ENDERECO'));
+  const iGps  = idx(h => h === 'GPS');
+  const iLat  = idx(h => h.startsWith('LAT'));
+  const iLng  = idx(h => h.startsWith('LON') || h.startsWith('LNG'));
+  const iCon  = idx(h => h.startsWith('CONCEDENTE'));
+  const iPla  = idx(h => h.startsWith('NOME DA PLANILHA'));
+  const body  = rows.slice(hi + 1);
 
-  // 2. Colunas de lat/lng numéricas — pelo header
-  let latCol = -1, lngCol = -1, gpsCol = -1;
-  header.forEach((h, i) => {
-    const hl = String(h || '').toLowerCase();
-    if (hl.includes('lat')) latCol = i;
-    if (hl.includes('lon') || hl.includes('lng')) lngCol = i;
-    if (hl.includes('gps') || hl.includes('map')) gpsCol = i;
+  // 2. Coluna da campanha = a que tem '|' nos dados (o cabeçalho pode ser uma data)
+  let iCamp = -1;
+  for (let r = 0; r < Math.min(10, body.length) && iCamp < 0; r++) {
+    const row = body[r] || [];
+    for (let k = row.length - 1; k >= 0; k--) {
+      if (String(row[k] == null ? '' : row[k]).includes('|')) { iCamp = k; break; }
+    }
+  }
+  if (iCamp < 0) { showToast('❌ Coluna de campanhas não encontrada'); return; }
+
+  // 3. Semana (coluna "Nome da planilha" → SEM40, ou nome do ficheiro)
+  let weekNum = null;
+  if (iPla >= 0) {
+    for (const r of body) {
+      const m = String(r[iPla] || '').match(/SEM\s*(\d{1,2})/i);
+      if (m) { weekNum = parseInt(m[1]); break; }
+    }
+  }
+  if (weekNum == null) {
+    const m = String(fileName || '').match(/sem\s*[_-]?(\d{1,2})/i);
+    if (m) weekNum = parseInt(m[1]);
+  }
+
+  const build = (week, forcedTipo) => {
+    const entries = {};
+    let total = 0;
+    const tipos = new Set();
+    body.forEach(row => {
+      const camp   = String(row[iCamp] == null ? '' : row[iCamp]).trim();
+      const morada = String(row[iMor]  == null ? '' : row[iMor]).trim();
+      if (!camp || !morada) return;
+      const prim = iPrim >= 0 ? String(row[iPrim] == null ? '' : row[iPrim]).trim() : '';
+      const desc = iDesc >= 0 ? String(row[iDesc] == null ? '' : row[iDesc]).trim() : '';
+      const mupi = /[A-Za-z]/.test(desc) ? desc : (prim || desc);
+
+      let lat = NaN, lng = NaN;
+      if (iLat >= 0 && iLng >= 0) { lat = parseFloat(row[iLat]); lng = parseFloat(row[iLng]); }
+      if ((isNaN(lat) || isNaN(lng)) && iGps >= 0) {
+        const m = String(row[iGps] || '').match(/place\/(-?\d+\.?\d*)\+(-?\d+\.?\d*)/);
+        if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+      }
+
+      let tipo = forcedTipo;
+      if (!tipo) {
+        const con = normTxt(row[iCon]);
+        tipo = con.includes('METRO') ? 'metro' : (/\bIP\b/.test(con) ? 'ip' : 'rua');
+      }
+      camp.split('|').map(s => s.trim()).filter(Boolean).forEach(name => {
+        (entries[name] = entries[name] || []).push({
+          mupi, morada, lat: isNaN(lat) ? null : lat, lng: isNaN(lng) ? null : lng, tipo, week
+        });
+        total++;
+        tipos.add(tipo);
+      });
+    });
+    if (!total) { showToast('❌ Nenhuma localização encontrada no ficheiro'); return; }
+
+    // Substituir os dados desta semana (e legados sem semana) dos mesmos tipos
+    state.mapData = state.mapData || {};
+    Object.keys(state.mapData).forEach(n => {
+      state.mapData[n] = state.mapData[n].filter(e => !((e.week === week || !e.week) && tipos.has(e.tipo || 'rua')));
+      if (!state.mapData[n].length) delete state.mapData[n];
+    });
+    Object.keys(entries).forEach(n => { state.mapData[n] = (state.mapData[n] || []).concat(entries[n]); });
+
+    state.locFiles = state.locFiles || {};
+    const lf = state.locFiles[week] = state.locFiles[week] || {};
+    if (tipos.has('rua')) lf.rua = true;
+    if (tipos.has('metro') || tipos.has('ip')) lf.metroip = true;
+
+    pruneLocations(3);
+    applyLocationAdjustments(week);
+    saveState();
+
+    const kind = (tipos.has('metro') || tipos.has('ip')) ? (tipos.has('rua') ? 'Rua + Metro/IP' : 'Metro/IP') : 'Rua';
+    const pend = pendingLinkCount(week);
+    document.getElementById('uploadSuccess').style.display = 'block';
+    document.getElementById('uploadSuccess').textContent = `✓ Localizações ${kind} carregadas — ${week}`;
+    const statsEl = document.getElementById('importStats');
+    statsEl.style.display = 'block';
+    statsEl.innerHTML = `
+      <div class="stat-row"><span class="stat-label">Tipo</span><span class="stat-value green">Localizações ${kind}</span></div>
+      <div class="stat-row"><span class="stat-label">Semana</span><span class="stat-value green">${week}</span></div>
+      <div class="stat-row"><span class="stat-label">Localizações</span><span class="stat-value green">${total}</span></div>
+      <div class="stat-row"><span class="stat-label">Campanhas nos ficheiros</span><span class="stat-value green">${Object.keys(entries).length}</span></div>
+      <div class="stat-row"><span class="stat-label">Mupis por ligar (analógicos)</span><span class="stat-value ${pend ? 'red' : 'green'}">${pend}</span></div>
+    `;
+    renderAll();
+    showToast(`✓ ${total} localizações (${kind}) — ${week}`);
+    maybePromptLinking(week);
+  };
+
+  const withWeek = week => {
+    if (iCon < 0) askLocationType(t => build(week, t));
+    else build(week, null);
+  };
+  if (weekNum == null) askWeek(w => withWeek(w));
+  else withWeek('S' + weekNum);
+}
+
+// Guardar só as 3 semanas mais recentes de localizações (limite do armazenamento)
+function pruneLocations(keep) {
+  const weeks = new Set();
+  Object.values(state.mapData || {}).forEach(arr => arr.forEach(e => { if (e.week) weeks.add(e.week); }));
+  const sorted = [...weeks].sort((a, b) => (parseInt(b.slice(1)) || 0) - (parseInt(a.slice(1)) || 0));
+  const keepSet = new Set(sorted.slice(0, keep));
+  Object.keys(state.mapData || {}).forEach(n => {
+    state.mapData[n] = state.mapData[n].filter(e => !e.week || keepSet.has(e.week));
+    if (!state.mapData[n].length) delete state.mapData[n];
+  });
+  Object.keys(state.locFiles || {}).forEach(w => { if (!keepSet.has(w)) delete state.locFiles[w]; });
+}
+
+// ══════════════════════════════════════════════════════════════
+// POP-UP "LOCAIS" (só nomes das estações Metro/IP)
+// ══════════════════════════════════════════════════════════════
+function openStations(id) {
+  const c = findCampaign(id);
+  const week = state.activeWeek;
+  document.getElementById('stationsTitle').textContent = c ? (c.campanha || 'Locais') : 'Locais';
+  const files = (state.locFiles || {})[week] || {};
+  const note = t => `<div style="padding:18px 0; font-size:13px; color:var(--muted); line-height:1.5;">${t}</div>`;
+  let html = '';
+  if (!c) {
+    html = note('Campanha não encontrada.');
+  } else if (!files.metroip) {
+    html = note('Ainda não importaste o ficheiro de localizações Metro/IP desta semana.');
+  } else {
+    const names = linkedNamesFor(c, week);
+    if (!names.length) {
+      html = note('Esta campanha ainda não está ligada aos ficheiros de localizações.') +
+        `<button class="btn btn-primary" style="width:100%" onclick="closeSheet('stationsSheet'); openLinkSheet();">Ligar campanha</button>`;
+    } else {
+      const by = locEntriesByName(week);
+      const seen = new Map();
+      names.forEach(n => (by[n] || []).forEach(e => {
+        if (e.tipo === 'metro' || e.tipo === 'ip') {
+          const k = normTxt(e.morada).trim();
+          if (k && !seen.has(k)) seen.set(k, e.morada);
+        }
+      }));
+      const list = [...seen.values()].sort((a, b) => a.localeCompare(b, 'pt'));
+      html = list.length
+        ? list.map(s => `<div class="station-row">${escHtml(s)}</div>`).join('')
+        : note('Esta campanha não consta no ficheiro de Metro/IP.');
+    }
+  }
+  document.getElementById('stationsBody').innerHTML = html;
+  openSheet('stationsSheet');
+}
+
+// ══════════════════════════════════════════════════════════════
+// POP-UP "O QUE FALTA" (por zona, só consulta)
+// ══════════════════════════════════════════════════════════════
+var _missZone = 'r', _missType = 'all';
+
+function openMissingSheet() { renderMissing(); openSheet('missingSheet'); }
+function setMissZone(z) { _missZone = z; renderMissing(); }
+function setMissType(t) { _missType = t; renderMissing(); }
+
+function renderMissing() {
+  const isAnalog = state.activeType === 'analog';
+  const types = isAnalog ? AN_TYPES : DIG_TYPES;
+  if (_missType !== 'all' && !types.some(t => t[0] === _missType)) _missType = 'all';
+  const zones = [['r', 'Rua', ''], ['m', 'Metro', 'metro'], ['ip', 'IP', 'ip']];
+  const zoneLabel = zones.find(z => z[0] === _missZone)[1];
+
+  const w = state.weeks[state.activeWeek];
+  const camps = w ? w.campaigns : [];
+  const rows = [];
+  let total = 0;
+  camps.forEach(c => {
+    if ((c.subtype === 'analog') !== isAnalog) return;
+    if (!matchesTypeFilter(c, _missType)) return;
+    const p = state.progress[campaignId(c)] || { r: 0, m: 0, ip: 0 };
+    const falta = Math.max(0, (c[_missZone] || 0) - (p[_missZone] || 0));
+    if (falta > 0) { rows.push({ c, falta }); total += falta; }
+  });
+  rows.sort((a, b) => b.falta - a.falta || (a.c.campanha || '').localeCompare(b.c.campanha || '', 'pt'));
+
+  const zoneChips = zones.map(z =>
+    `<button class="chip ${z[2]} ${_missZone === z[0] ? 'active' : ''}" onclick="setMissZone('${z[0]}')">${z[1]}</button>`).join('');
+  const typeChips = [['all', 'Todos']].concat(types).map(t =>
+    `<button class="chip small ${_missType === t[0] ? 'active' : ''}" onclick="setMissType('${t[0]}')">${t[1]}</button>`).join('');
+
+  const list = rows.length
+    ? rows.map(({ c, falta }) => `
+        <div class="miss-row">
+          <div class="miss-info">
+            <div class="miss-name">${escHtml(c.campanha || '—')}</div>
+            <div class="miss-meta">${escHtml(suporteLabel(c))} · ${escHtml(c.venda)}</div>
+          </div>
+          <div class="miss-count">faltam ${falta}</div>
+        </div>`).join('')
+    : `<div style="padding:22px 0; text-align:center; font-size:13px; color:var(--muted);">Nada em falta em ${zoneLabel} ✓</div>`;
+
+  document.getElementById('missingTitle').textContent =
+    `O que falta${state.activeWeek ? ' — ' + state.activeWeek : ''} · ${isAnalog ? 'Analógicos' : 'Digitais'}`;
+  document.getElementById('missingBody').innerHTML = `
+    <div class="chip-row">${zoneChips}</div>
+    <div class="chip-row">${typeChips}</div>
+    <div class="miss-summary">${total} foto${total === 1 ? '' : 's'} de ${zoneLabel} em falta · ${rows.length} campanha${rows.length === 1 ? '' : 's'}</div>
+    ${list}`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// POP-UP "LIGAR CAMPANHAS" (Mupis analógicos ↔ nomes nos ficheiros)
+// ══════════════════════════════════════════════════════════════
+var _linkOpen = -1, _linkPool = [], _linkPending = [], _linkLinked = [], _linkIgnored = [];
+
+function openLinkSheet() { _linkOpen = -1; renderLinkSheet(); openSheet('linkSheet'); }
+function toggleLinkOpen(i) { _linkOpen = (_linkOpen === i) ? -1 : i; renderLinkSheet(); }
+
+function linkScore(c, L) {
+  const at = nameTokens(cleanCampaignName(c.campanha)).filter(t => t.length >= 3).map(t => t.slice(0, 3));
+  return nameTokens(L).filter(t => t.length >= 3).reduce((s, t) => s + (at.includes(t.slice(0, 3)) ? 1 : 0), 0);
+}
+
+function renderLinkSheet() {
+  const week = state.activeWeek;
+  const body = document.getElementById('linkBody');
+  document.getElementById('linkTitle').textContent = 'Ligar campanhas' + (week ? ' — ' + week : '');
+  const note = t => `<div style="padding:18px 0; font-size:13px; color:var(--muted); line-height:1.5;">${t}</div>`;
+  const files = (state.locFiles || {})[week] || {};
+  if (!week || !(files.rua || files.metroip)) {
+    body.innerHTML = note('Importa primeiro os ficheiros de localizações (Rua e/ou Metro/IP) desta semana.');
+    return;
+  }
+  const camps = weekMupiCampaigns(week);
+  if (!camps.length) {
+    body.innerHTML = note('Não há Mupis analógicos carregados nesta semana. Importa primeiro o ficheiro dos analógicos.');
+    return;
+  }
+
+  const seen = {};
+  const pres = locPresence(week);
+  const linkedAll = new Set();
+  _linkPending = []; _linkLinked = []; _linkIgnored = [];
+  camps.forEach(c => {
+    const k = cleanKey(c.campanha);
+    if (!k || seen[k]) return;
+    seen[k] = true;
+    if (state.locIgnore[k]) { _linkIgnored.push({ k, c }); return; }
+    const names = linkedNamesFor(c, week);
+    names.forEach(n => linkedAll.add(n));
+    (names.length ? _linkLinked : _linkPending).push({ k, c, names });
+  });
+  _linkPool = Object.keys(pres).filter(n => !linkedAll.has(n)).sort((a, b) => a.localeCompare(b, 'pt'));
+
+  const tag = n => {
+    const p = pres[n], t = [];
+    if (p.rua) t.push('Rua'); if (p.metro) t.push('Metro'); if (p.ip) t.push('IP');
+    return t.join(' · ');
+  };
+
+  let html = '';
+  html += `<div class="link-section" style="margin-top:0">Por ligar (${_linkPending.length})</div>`;
+  if (!_linkPending.length) html += note('Todas as campanhas estão ligadas ✓');
+  _linkPending.forEach((p, i) => {
+    const open = _linkOpen === i;
+    let pool = '';
+    if (open) {
+      const sorted = [..._linkPool.keys()].sort((a, b) =>
+        linkScore(p.c, _linkPool[b]) - linkScore(p.c, _linkPool[a]) || _linkPool[a].localeCompare(_linkPool[b], 'pt'));
+      pool = `<div class="link-pool">
+        <div style="font-size:12px; color:var(--muted); padding:8px 0 4px;">Escolhe os nomes dos ficheiros que correspondem (podes escolher vários):</div>
+        ${sorted.map(j => `<label class="link-opt"><input type="checkbox" name="lnk" value="${j}"> <span>${escHtml(_linkPool[j])} <span style="color:var(--muted); font-size:11px;">(${tag(_linkPool[j])})</span></span></label>`).join('') || '<div style="font-size:12px; color:var(--muted); padding:6px 0;">Não há nomes por ligar.</div>'}
+        <div class="btn-row" style="margin-top:10px">
+          <button class="btn btn-primary" style="flex:1" onclick="saveLink(${i})">Guardar</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="ignoreLink(${i})">Não alterar</button>
+        </div>
+      </div>`;
+    }
+    html += `<div class="link-card"><div class="link-head" onclick="toggleLinkOpen(${i})"><span>${escHtml(cleanCampaignName(p.c.campanha) || p.c.campanha)}</span><span style="color:var(--muted)">${open ? '▲' : '▼'}</span></div>${pool}</div>`;
   });
 
-  // Fallback: detectar lat/lng pelos valores numéricos
-  if (latCol === -1 || lngCol === -1) {
-    const sample = rows[1] || [];
-    for (let i = 0; i < sample.length; i++) {
-      const v = parseFloat(String(sample[i] || ''));
-      if (!isNaN(v) && v > 35 && v < 45) latCol = i;
-      if (!isNaN(v) && v < -5 && v > -12) lngCol = i;
-    }
-  }
-
-  // Fallback: detectar coluna GPS pelo URL nas células
-  if (gpsCol === -1) {
-    const sample = rows[1] || [];
-    for (let i = 0; i < sample.length; i++) {
-      if (String(sample[i] || '').includes('maps')) { gpsCol = i; break; }
-    }
-  }
-
-  if (latCol === -1 && lngCol === -1 && gpsCol === -1) {
-    showToast('❌ Não foi possível encontrar coordenadas no ficheiro');
-    return;
-  }
-
-  const mupiCol = 1, moradaCol = 2;
-
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    const mupi   = String(row[mupiCol] || '').trim();
-    const morada = String(row[moradaCol] || '').trim();
-    const camp   = String(row[campCol] || '').trim();
-    if (!mupi || !camp) continue;
-
-    let lat = NaN, lng = NaN;
-
-    // Caso 1: colunas numéricas de lat/lng
-    if (latCol !== -1 && lngCol !== -1) {
-      lat = parseFloat(String(row[latCol] || ''));
-      lng = parseFloat(String(row[lngCol] || ''));
-    }
-
-    // Caso 2: extrair do URL Google Maps (ex: /place/38.703+-9.194)
-    if ((isNaN(lat) || isNaN(lng)) && gpsCol !== -1) {
-      const url = String(row[gpsCol] || '');
-      const m = url.match(/place\/(-?\d+\.?\d*)\+(-?\d+\.?\d*)/);
-      if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
-    }
-
-    if (isNaN(lat) || isNaN(lng)) continue;
-
-    camp.split('|').forEach(c => {
-      c = c.trim();
-      if (!c) return;
-      if (!campanhas[c]) campanhas[c] = [];
-      campanhas[c].push({ mupi, morada, lat, lng });
+  if (_linkLinked.length) {
+    html += `<div class="link-section">Ligadas (${_linkLinked.length})</div>`;
+    _linkLinked.forEach((p, i) => {
+      html += `<div class="miss-row"><div class="miss-info"><div class="miss-name">${escHtml(cleanCampaignName(p.c.campanha) || p.c.campanha)}</div><div class="miss-meta">${escHtml(p.names.join(', '))}</div></div><button class="loc-btn" onclick="unlinkCampaign(${i})">Desligar</button></div>`;
     });
   }
-
-  if (Object.keys(campanhas).length === 0) {
-    showToast('❌ Nenhuma campanha encontrada no ficheiro');
-    return;
+  if (_linkIgnored.length) {
+    html += `<div class="link-section">Não alteradas (${_linkIgnored.length})</div>`;
+    _linkIgnored.forEach((p, i) => {
+      html += `<div class="miss-row"><div class="miss-info"><div class="miss-name">${escHtml(cleanCampaignName(p.c.campanha) || p.c.campanha)}</div></div><button class="loc-btn" onclick="relinkCampaign(${i})">Ligar</button></div>`;
+    });
   }
+  body.innerHTML = html;
+}
 
-  state.mapData = campanhas;
-  saveState();
-  switchTab('map');
-  showToast(`✓ ${Object.keys(campanhas).length} campanhas carregadas no mapa`);
-  try { document.getElementById('mapFileInput').value = ''; } catch(e) {}
+function saveLink(i) {
+  const p = _linkPending[i];
+  if (!p) return;
+  const chosen = [...document.querySelectorAll('#linkSheet input[name="lnk"]:checked')].map(el => _linkPool[parseInt(el.value)]);
+  if (!chosen.length) { showToast('Escolhe pelo menos um nome'); return; }
+  state.locAliases[p.k] = [...new Set([...(state.locAliases[p.k] || []), ...chosen])];
+  delete state.locIgnore[p.k];
+  _linkOpen = -1;
+  applyLocationAdjustments(state.activeWeek);
+  renderLinkSheet();
+  renderCards();
+  showToast('✓ Campanha ligada');
+}
+function ignoreLink(i) {
+  const p = _linkPending[i];
+  if (!p) return;
+  state.locIgnore[p.k] = true;
+  _linkOpen = -1;
+  applyLocationAdjustments(state.activeWeek);
+  renderLinkSheet();
+  renderCards();
+}
+function unlinkCampaign(i) {
+  const p = _linkLinked[i];
+  if (!p) return;
+  delete state.locAliases[p.k];
+  state.locIgnore[p.k] = true;
+  applyLocationAdjustments(state.activeWeek);
+  renderLinkSheet();
+  renderCards();
+}
+function relinkCampaign(i) {
+  const p = _linkIgnored[i];
+  if (!p) return;
+  delete state.locIgnore[p.k];
+  applyLocationAdjustments(state.activeWeek);
+  renderLinkSheet();
+  renderCards();
 }
 
 
@@ -1960,6 +2501,9 @@ function initLeafletMap() {
       maxZoom: 19
     }).addTo(leafletMap);
     leafletMap.invalidateSize(true);
+    leafletMap.on('click', onMapClickForStart);
+    startMarker = null;
+    if (state.routeStart) placeStartMarker(state.routeStart.lat, state.routeStart.lng);
 
     // Centrar no utilizador se disponível
     if (navigator.geolocation) {
@@ -2001,8 +2545,8 @@ function renderMapView() {
   // Populate select
   const sel = document.getElementById('campaignSelect');
   const current = sel.value;
-  sel.innerHTML = '<option value="">Seleciona uma campanha...</option>' +
-    names.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n} (${campanhas[n].length} mupis)</option>`).join('');
+  sel.innerHTML = '<option value="">Ver uma campanha específica (opcional)...</option>' +
+    names.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n} (${campanhas[n].length} localizações)</option>`).join('');
 
   // Map init and campaign display handled by switchTab after DOM is ready
 }
@@ -2012,25 +2556,57 @@ function filterMap() {
   const name = sel.value;
   if (!name) {
     clearMapMarkers();
-    document.getElementById('mapStats').textContent = 'Seleciona uma campanha para ver os Mupis no mapa';
+    clearRoute();
+    document.getElementById('mapStats').textContent = 'Toca em "Calcular rota da semana" para veres as paragens em falta';
     return;
   }
   showMapCampaign(name);
 }
 
+function tipoColor(tipo) {
+  if (tipo === 'metro') return '#af52de';
+  if (tipo === 'ip') return '#ff9500';
+  return '#0071e3';
+}
+function tipoLabelPt(tipo) {
+  if (tipo === 'metro') return 'Metro';
+  if (tipo === 'ip') return 'IP';
+  return 'Rua';
+}
+
+function mapPointKey(campName, m) {
+  return `${campName}||${m.tipo || 'rua'}||${m.mupi}||${m.lat}_${m.lng}`;
+}
+
+function findMapPool(name) {
+  if (!state.mapData) return [];
+  let arr = state.mapData[name];
+  if (!arr) {
+    const key = Object.keys(state.mapData).find(k => k.trim().toLowerCase() === (name || '').trim().toLowerCase());
+    arr = key ? state.mapData[key] : [];
+  }
+  const wk = arr.filter(e => !e.week || e.week === state.activeWeek);
+  return (wk.length ? wk : arr).filter(hasCoords);
+}
+
 function showMapCampaign(name) {
-  const campanhas = state.mapData || {};
-  const mupis = campanhas[name] || [];
+  const mupis = findMapPool(name);
   clearMapMarkers();
+  clearRoute();
 
   if (!leafletMap) return;
 
   const bounds = [];
+  let visitedCount = 0;
 
   mupis.forEach(m => {
+    const key = mapPointKey(name, m);
+    const isVisited = !!(state.mapVisited || {})[key];
+    if (isVisited) visitedCount++;
+
     const marker = L.circleMarker([m.lat, m.lng], {
       radius: 7,
-      fillColor: '#0071e3',
+      fillColor: isVisited ? '#34c759' : tipoColor(m.tipo),
       color: '#fff',
       weight: 2,
       opacity: 1,
@@ -2038,12 +2614,14 @@ function showMapCampaign(name) {
     }).addTo(leafletMap);
 
     marker.bindPopup(`
-      <strong>${m.mupi}</strong><br>
+      <strong>${m.mupi}</strong> <span style="color:#86868b">(${tipoLabelPt(m.tipo)})</span><br>
       <span style="color:#86868b">${m.morada}</span><br>
-      <a href="https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lng}" target="_blank"
-         style="color:#0071e3; font-size:12px; font-weight:600; text-decoration:none;">
-        🗺 Abrir no Google Maps
-      </a>
+      <button onclick="toggleMapVisited('${name.replace(/'/g,"\\'")}','${key.replace(/'/g,"\\'")}'); showMapCampaign('${name.replace(/'/g,"\\'")}');"
+        style="margin-top:8px; padding:6px 12px; border-radius:6px; border:none;
+               background:${isVisited ? '#f0f0f2' : '#e9f9ed'}; color:${isVisited ? '#3a3a3c' : '#1a7a35'};
+               font-size:12px; font-weight:600; cursor:pointer; width:100%;">
+        ${isVisited ? '↺ Marcar como pendente' : '✓ Marcar como visitado'}
+      </button>
     `);
     mapMarkers.push(marker);
     bounds.push([m.lat, m.lng]);
@@ -2054,12 +2632,268 @@ function showMapCampaign(name) {
   }
 
   document.getElementById('mapStats').innerHTML =
-    `<strong style="color:var(--text)">${name}</strong> — <span style="color:var(--accent); font-weight:600">${mupis.length} Mupis</span>`;
+    `<strong style="color:var(--text)">${name}</strong> — <span style="color:var(--accent); font-weight:600">${mupis.length} localizações</span>` +
+    ` <span style="color:var(--muted)">(${mupis.length - visitedCount} por visitar, ${visitedCount} visitados)</span>`;
+}
+
+function toggleMapVisited(campName, key) {
+  state.mapVisited = state.mapVisited || {};
+  if (state.mapVisited[key]) delete state.mapVisited[key];
+  else state.mapVisited[key] = true;
+  saveState();
 }
 
 function clearMapMarkers() {
   mapMarkers.forEach(m => m.remove());
   mapMarkers = [];
+}
+
+
+// ── ROUTE PLANNING ────────────────────────────────────────────
+function toggleSetStartMode() {
+  settingStart = !settingStart;
+  const btn = document.getElementById('setStartBtn');
+  btn.classList.toggle('active', settingStart);
+  btn.textContent = settingStart ? '📍 Toca no mapa para marcar…' : '📍 Definir ponto de partida';
+  if (settingStart) showToast('Toca no mapa onde vais começar');
+}
+
+function onMapClickForStart(e) {
+  if (!settingStart) return;
+  setRouteStart(e.latlng.lat, e.latlng.lng);
+  settingStart = false;
+  const btn = document.getElementById('setStartBtn');
+  if (btn) { btn.classList.remove('active'); btn.textContent = '📍 Definir ponto de partida'; }
+}
+
+function setRouteStart(lat, lng) {
+  state.routeStart = { lat, lng };
+  saveState();
+  placeStartMarker(lat, lng);
+  showToast('✓ Ponto de partida definido');
+}
+
+function placeStartMarker(lat, lng) {
+  if (!leafletMap) return;
+  if (startMarker) { startMarker.remove(); startMarker = null; }
+  startMarker = L.marker([lat, lng], {
+    draggable: true,
+    icon: L.divIcon({ className: '', html: '<div class="route-start-icon">🚩</div>', iconSize: [28, 28], iconAnchor: [14, 14] })
+  }).addTo(leafletMap).bindPopup('Ponto de partida');
+  startMarker.on('dragend', () => {
+    const pos = startMarker.getLatLng();
+    state.routeStart = { lat: pos.lat, lng: pos.lng };
+    saveState();
+    showToast('✓ Ponto de partida atualizado — recalcula a rota');
+  });
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+function pathDistance(start, route) {
+  let d = 0, prev = start;
+  route.forEach(p => { d += haversine(prev.lat, prev.lng, p.lat, p.lng); prev = p; });
+  return d;
+}
+
+function nearestNeighborRoute(start, points) {
+  const remaining = [...points];
+  const route = [];
+  let current = start;
+  while (remaining.length) {
+    let bestIdx = 0, bestDist = Infinity;
+    remaining.forEach((p, i) => {
+      const d = haversine(current.lat, current.lng, p.lat, p.lng);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    });
+    current = remaining.splice(bestIdx, 1)[0];
+    route.push(current);
+  }
+  return route;
+}
+
+function twoOpt(start, route) {
+  let best = route, bestDist = pathDistance(start, best);
+  let improved = true;
+  while (improved) {
+    improved = false;
+    for (let i = 0; i < best.length - 1; i++) {
+      for (let j = i + 1; j < best.length; j++) {
+        const candidate = best.slice(0, i).concat(best.slice(i, j + 1).reverse(), best.slice(j + 1));
+        const d = pathDistance(start, candidate);
+        if (d < bestDist - 1e-9) { best = candidate; bestDist = d; improved = true; }
+      }
+    }
+  }
+  return best;
+}
+
+function clearRoute() {
+  if (routeLine) { routeLine.remove(); routeLine = null; }
+  routeStopMarkers.forEach(m => m.remove());
+  routeStopMarkers = [];
+  const resEl = document.getElementById('routeResult');
+  if (resEl) { resEl.style.display = 'none'; resEl.innerHTML = ''; }
+}
+
+function calculateRoute() {
+  if (!state.routeStart) {
+    showToast('❌ Define primeiro o ponto de partida');
+    toggleSetStartMode();
+    return;
+  }
+  if (!state.activeWeek || !state.weeks[state.activeWeek]) {
+    showToast('❌ Não há campanhas carregadas nesta semana');
+    return;
+  }
+
+  const start = state.routeStart;
+  const campaigns = state.weeks[state.activeWeek].campaigns || [];
+
+  // 1. Somar, por nome de campanha, quantas fotos de cada rede ainda faltam
+  //    (soma de todas as vendas/suportes com esse nome de campanha)
+  const needs = {};
+  campaigns.forEach(c => {
+    const name = (c.campanha || '').trim();
+    if (!name) return;
+    const id = campaignId(c);
+    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+    if (!needs[name]) needs[name] = { rua: 0, metro: 0, ip: 0 };
+    needs[name].rua   += Math.max(0, (c.r  || 0) - (p.r  || 0));
+    needs[name].metro += Math.max(0, (c.m  || 0) - (p.m  || 0));
+    needs[name].ip    += Math.max(0, (c.ip || 0) - (p.ip || 0));
+  });
+
+  // 2. Para cada campanha em falta, escolher localizações pendentes do tipo certo
+  //    (as mais próximas do ponto de partida primeiro), na quantidade exata que falta
+  const stops = [];
+  const shortages = [];
+  const involvedCampaigns = new Set();
+
+  Object.keys(needs).forEach(name => {
+    const need = needs[name];
+    if (need.rua + need.metro + need.ip === 0) return;
+    const pool = poolForCampaign(name);
+
+    ['rua', 'metro', 'ip'].forEach(tipo => {
+      const needed = need[tipo];
+      if (needed <= 0) return;
+      const candidates = pool
+        .filter(p => (p.tipo || 'rua') === tipo)
+        .filter(p => !(state.mapVisited || {})[mapPointKey(name, p)])
+        .map(p => ({ ...p, campanha: name, dist: haversine(start.lat, start.lng, p.lat, p.lng) }))
+        .sort((a, b) => a.dist - b.dist);
+      const chosen = candidates.slice(0, needed);
+      chosen.forEach(p => { stops.push(p); involvedCampaigns.add(name); });
+      if (chosen.length < needed) shortages.push({ campanha: name, tipo, faltam: needed - chosen.length });
+    });
+  });
+
+  clearRoute();
+  clearMapMarkers();
+
+  // 3. Mostrar, como contexto, os restantes pontos das campanhas envolvidas (esbatidos)
+  involvedCampaigns.forEach(name => {
+    poolForCampaign(name).forEach(p => {
+      const isSelected = stops.some(s => s.campanha === name && s.mupi === p.mupi && s.lat === p.lat && s.lng === p.lng && (s.tipo||'rua') === (p.tipo||'rua'));
+      if (isSelected) return;
+      const key = mapPointKey(name, p);
+      const isVisited = !!(state.mapVisited || {})[key];
+      const marker = L.circleMarker([p.lat, p.lng], {
+        radius: 5,
+        fillColor: isVisited ? '#34c759' : tipoColor(p.tipo),
+        color: '#fff', weight: 1.5,
+        opacity: 1, fillOpacity: isVisited ? 0.7 : 0.35
+      }).addTo(leafletMap);
+      marker.bindPopup(`
+        <strong>${p.mupi}</strong> <span style="color:#86868b">(${tipoLabelPt(p.tipo)})</span><br>
+        <span style="color:#86868b">${p.morada}</span><br>
+        <span style="color:#86868b; font-size:11px;">${name}</span><br>
+        <button onclick="toggleMapVisited('${name.replace(/'/g,"\\'")}','${key.replace(/'/g,"\\'")}'); calculateRoute();"
+          style="margin-top:8px; padding:6px 12px; border-radius:6px; border:none;
+                 background:${isVisited ? '#f0f0f2' : '#e9f9ed'}; color:${isVisited ? '#3a3a3c' : '#1a7a35'};
+                 font-size:12px; font-weight:600; cursor:pointer; width:100%;">
+          ${isVisited ? '↺ Marcar como pendente' : '✓ Marcar como visitado'}
+        </button>
+      `);
+      mapMarkers.push(marker);
+    });
+  });
+
+  if (stops.length === 0) {
+    document.getElementById('mapStats').innerHTML = shortages.length
+      ? `⚠️ Há fotos em falta sem localização conhecida (ver lista abaixo)`
+      : `✓ Não há fotos pendentes com localização conhecida nesta semana`;
+    if (shortages.length) {
+      const resEl = document.getElementById('routeResult');
+      resEl.style.display = 'block';
+      resEl.innerHTML = `
+        <div style="background:var(--orange-light); border-radius:var(--radius-sm); padding:12px 14px; font-size:13px; color:var(--orange); font-weight:500;">
+          ⚠️ Faltam localizações para: ${shortages.map(s => `${s.campanha} — ${tipoLabelPt(s.tipo)} ×${s.faltam}`).join('; ')}
+        </div>`;
+    }
+    showToast(shortages.length ? '⚠️ Faltam localizações — ver detalhe abaixo' : '✓ Tudo feito nesta semana!');
+    return;
+  }
+
+  // 4. Ordenar as paragens (vizinho-mais-próximo + 2-opt) e desenhar
+  let route = nearestNeighborRoute(start, stops);
+  if (stops.length <= 60) route = twoOpt(start, route);
+
+  const latlngs = [[start.lat, start.lng], ...route.map(p => [p.lat, p.lng])];
+  routeLine = L.polyline(latlngs, { color: '#0071e3', weight: 3, opacity: 0.7, dashArray: '6 8' }).addTo(leafletMap);
+
+  route.forEach((p, i) => {
+    const marker = L.marker([p.lat, p.lng], {
+      icon: L.divIcon({ className: '', html: `<div class="route-num-icon" style="background:${tipoColor(p.tipo)}">${i + 1}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] })
+    }).addTo(leafletMap).bindPopup(`<strong>${i + 1}. ${p.mupi}</strong> (${tipoLabelPt(p.tipo)})<br><span style="color:#86868b">${p.morada}</span><br><span style="color:#86868b; font-size:11px;">${p.campanha}</span>`);
+    routeStopMarkers.push(marker);
+  });
+
+  leafletMap.fitBounds(latlngs, { padding: [30, 30] });
+
+  const totalKm = pathDistance(start, route);
+  let prev = start;
+  const rows = route.map((p, i) => {
+    const d = haversine(prev.lat, prev.lng, p.lat, p.lng);
+    prev = p;
+    const key = mapPointKey(p.campanha, p);
+    return `
+      <div class="route-stop" onclick="toggleMapVisited('${p.campanha.replace(/'/g,"\\'")}','${key.replace(/'/g,"\\'")}'); calculateRoute();">
+        <div class="route-stop-num" style="background:${tipoColor(p.tipo)}">${i + 1}</div>
+        <div class="route-stop-info">
+          <div class="route-stop-name">${p.mupi} <span class="tag ${p.tipo}" style="margin-left:4px;">${tipoLabelPt(p.tipo).toUpperCase()}</span></div>
+          <div class="route-stop-addr">${p.morada} · ${p.campanha}</div>
+        </div>
+        <div class="route-stop-dist">${d.toFixed(1)} km</div>
+      </div>`;
+  }).join('');
+
+  const shortageHtml = shortages.length ? `
+    <div style="background:var(--orange-light); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:10px; font-size:12px; color:var(--orange); font-weight:500;">
+      ⚠️ Sem localização conhecida para: ${shortages.map(s => `${s.campanha} — ${tipoLabelPt(s.tipo)} ×${s.faltam}`).join('; ')}
+    </div>` : '';
+
+  const resEl = document.getElementById('routeResult');
+  resEl.style.display = 'block';
+  resEl.innerHTML = `
+    ${shortageHtml}
+    <div class="route-summary">
+      <span>🧭 ${route.length} paragens</span>
+      <span>${totalKm.toFixed(1)} km (linha reta)</span>
+    </div>
+    ${rows}
+  `;
+  document.getElementById('mapStats').innerHTML =
+    `<strong style="color:var(--text)">Rota da semana ${state.activeWeek}</strong> — <span style="color:var(--accent); font-weight:600">${route.length} paragens em ${involvedCampaigns.size} campanhas</span>`;
+  showToast('✓ Rota calculada — toca numa paragem para a marcar como visitada');
 }
 
 // ── INIT ───────────────────────────────────────────────────────
