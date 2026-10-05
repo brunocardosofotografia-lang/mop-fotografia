@@ -388,33 +388,6 @@
     cursor:pointer; margin-bottom:12px;
   }
 
-  /* ── ROUTE ── */
-  .route-num-icon, .route-start-icon {
-    color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-size:12px; font-weight:700; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.3);
-  }
-  .route-num-icon { background:var(--accent); width:24px; height:24px; }
-  .route-start-icon { background:var(--red); width:28px; height:28px; font-size:14px; }
-  .route-summary {
-    background:var(--accent-light); border-radius:var(--radius-sm);
-    padding:11px 14px; margin-bottom:10px; font-size:13px; color:var(--accent);
-    font-weight:600; display:flex; justify-content:space-between; align-items:center;
-  }
-  .route-stop {
-    background:var(--surface); border-radius:var(--radius-sm);
-    padding:10px 12px; margin-bottom:6px; display:flex; align-items:center; gap:10px;
-    box-shadow:var(--shadow); cursor:pointer;
-  }
-  .route-stop-num {
-    width:22px; height:22px; border-radius:50%; background:var(--accent); color:#fff;
-    font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  }
-  .route-stop-info { flex:1; min-width:0; }
-  .route-stop-name { font-size:13px; font-weight:600; color:var(--text); }
-  .route-stop-addr { font-size:11px; color:var(--muted); }
-  .route-stop-dist { font-size:11px; color:var(--muted); font-weight:500; white-space:nowrap; flex-shrink:0; }
-  #setStartBtn.active { background:var(--red); color:#fff; border-color:var(--red); }
-
   /* ── SHEETS (pop-ups) ── */
   .sheet-overlay { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.4);
     display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.25s; }
@@ -502,15 +475,10 @@
     <div class="empty-text">Importa localizações (Rua / Metro / IP) para ver o mapa</div>
   </div>
   <div id="mapContent" style="display:none">
-    <div class="btn-row" style="margin-top:0; margin-bottom:10px;">
-      <button class="btn btn-ghost" id="setStartBtn" onclick="toggleSetStartMode()">📍 Definir ponto de partida</button>
-      <button class="btn btn-primary" onclick="calculateRoute()">🧭 Calcular rota da semana</button>
-    </div>
     <div style="font-size:12px; color:var(--muted); margin-bottom:10px; display:flex; gap:14px; align-items:center;">
       <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#0071e3;margin-right:4px;"></span>Rua</span>
       <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#af52de;margin-right:4px;"></span>Metro</span>
       <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff9500;margin-right:4px;"></span>IP</span>
-      <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#34c759;margin-right:4px;"></span>Visitado</span>
     </div>
     <div style="margin-bottom:12px;">
       <select id="campaignSelect" onchange="filterMap()"
@@ -518,7 +486,7 @@
                border:1px solid var(--border); border-radius:var(--radius-sm);
                color:var(--text); font-size:14px; font-family:-apple-system,sans-serif;
                outline:none; box-shadow:var(--shadow);">
-        <option value="">Ver uma campanha específica (opcional)...</option>
+        <option value="">Seleciona uma campanha...</option>
       </select>
     </div>
     <div style="background:var(--surface); border-radius:var(--radius);
@@ -527,9 +495,8 @@
     </div>
     <div id="mapStats" style="background:var(--surface); border-radius:var(--radius);
          padding:13px 16px; box-shadow:var(--shadow); font-size:13px; color:var(--muted); margin-bottom:12px;">
-      Toca em "Calcular rota da semana" para veres as paragens em falta
+      Seleciona uma campanha para ver as localizações no mapa
     </div>
-    <div id="routeResult" style="display:none"></div>
   </div>
 </div>
 
@@ -728,10 +695,6 @@
 <script>
 var leafletMap = null;
 var mapMarkers = [];
-var startMarker = null;
-var settingStart = false;
-var routeLine = null;
-var routeStopMarkers = [];
 
 // ── STATE ──────────────────────────────────────────────────────
 var state = {
@@ -742,8 +705,6 @@ var state = {
   activeTypeFilter: 'all',
   activeType: 'digital',
   mapData: {},
-  mapVisited: {},   // { "campanha||mupi||lat_lng": true } — pontos já visitados/fotografados
-  routeStart: null, // { lat, lng } — ponto de partida escolhido para a rota
   locAliases: {},   // { chaveCampanha: [nomes nos ficheiros de localizações] } — ligações memorizadas
   locIgnore: {},    // { chaveCampanha: true } — campanhas a não ajustar
   adjOff: {},       // { campaignId: true } — ajustes desfeitos pelo utilizador
@@ -764,7 +725,7 @@ function loadState() {
 }
 
 function ensureState() {
-  ['weeks', 'progress', 'mapData', 'mapVisited', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
+  ['weeks', 'progress', 'mapData', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
     if (!state[k] || typeof state[k] !== 'object') state[k] = {};
   });
   if (!state.activeStatusFilter) state.activeStatusFilter = 'all';
@@ -1754,8 +1715,6 @@ function exportProgress() {
     activeWeek: state.activeWeek,
     activeType: state.activeType,
     mapData: state.mapData || {},
-    mapVisited: state.mapVisited || {},
-    routeStart: state.routeStart || null,
     locAliases: state.locAliases || {},
     locIgnore: state.locIgnore || {},
     adjOff: state.adjOff || {},
@@ -1787,8 +1746,6 @@ function importProgress(file) {
       if (data.activeWeek) state.activeWeek = data.activeWeek;
       if (data.activeType) state.activeType = data.activeType;
       if (data.mapData) state.mapData = { ...(state.mapData || {}), ...data.mapData };
-      if (data.mapVisited) state.mapVisited = { ...(state.mapVisited || {}), ...data.mapVisited };
-      if (data.routeStart) state.routeStart = data.routeStart;
       if (data.locAliases) state.locAliases = { ...(state.locAliases || {}), ...data.locAliases };
       if (data.locIgnore) state.locIgnore = { ...(state.locIgnore || {}), ...data.locIgnore };
       if (data.adjOff) state.adjOff = { ...(state.adjOff || {}), ...data.adjOff };
@@ -2092,20 +2049,6 @@ function maybePromptLinking(week) {
   if (!(files.rua || files.metroip)) return;
   if (state.activeWeek !== week) return;
   if (pendingLinkCount(week) > 0) openLinkSheet();
-}
-
-// Pool de localizações (com coordenadas) de uma campanha — usado no mapa/rota
-function poolForCampaign(name) {
-  const w = state.activeWeek;
-  const camp = ((state.weeks[w] || {}).campaigns || []).find(c => isMupi(c) && c.campanha === name);
-  if (camp) {
-    const names = linkedNamesFor(camp, w);
-    if (names.length) {
-      const by = locEntriesByName(w);
-      return names.flatMap(n => by[n] || []).filter(hasCoords);
-    }
-  }
-  return findMapPool(name);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2501,9 +2444,6 @@ function initLeafletMap() {
       maxZoom: 19
     }).addTo(leafletMap);
     leafletMap.invalidateSize(true);
-    leafletMap.on('click', onMapClickForStart);
-    startMarker = null;
-    if (state.routeStart) placeStartMarker(state.routeStart.lat, state.routeStart.lng);
 
     // Centrar no utilizador se disponível
     if (navigator.geolocation) {
@@ -2530,9 +2470,32 @@ function initLeafletMap() {
   }, 300);
 }
 
+function tipoColor(tipo) {
+  if (tipo === 'metro') return '#af52de';
+  if (tipo === 'ip') return '#ff9500';
+  return '#0071e3';
+}
+function tipoLabelPt(tipo) {
+  if (tipo === 'metro') return 'Metro';
+  if (tipo === 'ip') return 'IP';
+  return 'Rua';
+}
+
+// Localizações (com coordenadas) de uma campanha — da semana ativa, ou todas se não houver
+function findMapPool(name) {
+  if (!state.mapData) return [];
+  let arr = state.mapData[name];
+  if (!arr) {
+    const key = Object.keys(state.mapData).find(k => k.trim().toLowerCase() === (name || '').trim().toLowerCase());
+    arr = key ? state.mapData[key] : [];
+  }
+  const wk = arr.filter(e => !e.week || e.week === state.activeWeek);
+  return (wk.length ? wk : arr).filter(hasCoords);
+}
+
 function renderMapView() {
   const campanhas = state.mapData || {};
-  const names = Object.keys(campanhas).sort();
+  const names = Object.keys(campanhas).filter(n => findMapPool(n).length > 0).sort();
   const hasData = names.length > 0;
 
   document.getElementById('mapEmpty').style.display = hasData ? 'none' : 'block';
@@ -2545,8 +2508,8 @@ function renderMapView() {
   // Populate select
   const sel = document.getElementById('campaignSelect');
   const current = sel.value;
-  sel.innerHTML = '<option value="">Ver uma campanha específica (opcional)...</option>' +
-    names.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n} (${campanhas[n].length} localizações)</option>`).join('');
+  sel.innerHTML = '<option value="">Seleciona uma campanha...</option>' +
+    names.map(n => `<option value="${escHtml(n)}" ${n === current ? 'selected' : ''}>${escHtml(n)} (${findMapPool(n).length})</option>`).join('');
 
   // Map init and campaign display handled by switchTab after DOM is ready
 }
@@ -2556,72 +2519,35 @@ function filterMap() {
   const name = sel.value;
   if (!name) {
     clearMapMarkers();
-    clearRoute();
-    document.getElementById('mapStats').textContent = 'Toca em "Calcular rota da semana" para veres as paragens em falta';
+    document.getElementById('mapStats').textContent = 'Seleciona uma campanha para ver as localizações no mapa';
     return;
   }
   showMapCampaign(name);
 }
 
-function tipoColor(tipo) {
-  if (tipo === 'metro') return '#af52de';
-  if (tipo === 'ip') return '#ff9500';
-  return '#0071e3';
-}
-function tipoLabelPt(tipo) {
-  if (tipo === 'metro') return 'Metro';
-  if (tipo === 'ip') return 'IP';
-  return 'Rua';
-}
-
-function mapPointKey(campName, m) {
-  return `${campName}||${m.tipo || 'rua'}||${m.mupi}||${m.lat}_${m.lng}`;
-}
-
-function findMapPool(name) {
-  if (!state.mapData) return [];
-  let arr = state.mapData[name];
-  if (!arr) {
-    const key = Object.keys(state.mapData).find(k => k.trim().toLowerCase() === (name || '').trim().toLowerCase());
-    arr = key ? state.mapData[key] : [];
-  }
-  const wk = arr.filter(e => !e.week || e.week === state.activeWeek);
-  return (wk.length ? wk : arr).filter(hasCoords);
-}
-
 function showMapCampaign(name) {
   const mupis = findMapPool(name);
   clearMapMarkers();
-  clearRoute();
 
   if (!leafletMap) return;
 
   const bounds = [];
-  let visitedCount = 0;
 
   mupis.forEach(m => {
-    const key = mapPointKey(name, m);
-    const isVisited = !!(state.mapVisited || {})[key];
-    if (isVisited) visitedCount++;
-
     const marker = L.circleMarker([m.lat, m.lng], {
       radius: 7,
-      fillColor: isVisited ? '#34c759' : tipoColor(m.tipo),
+      fillColor: tipoColor(m.tipo),
       color: '#fff',
       weight: 2,
       opacity: 1,
       fillOpacity: 0.85
     }).addTo(leafletMap);
 
+    const gmaps = `https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}`;
     marker.bindPopup(`
-      <strong>${m.mupi}</strong> <span style="color:#86868b">(${tipoLabelPt(m.tipo)})</span><br>
-      <span style="color:#86868b">${m.morada}</span><br>
-      <button onclick="toggleMapVisited('${name.replace(/'/g,"\\'")}','${key.replace(/'/g,"\\'")}'); showMapCampaign('${name.replace(/'/g,"\\'")}');"
-        style="margin-top:8px; padding:6px 12px; border-radius:6px; border:none;
-               background:${isVisited ? '#f0f0f2' : '#e9f9ed'}; color:${isVisited ? '#3a3a3c' : '#1a7a35'};
-               font-size:12px; font-weight:600; cursor:pointer; width:100%;">
-        ${isVisited ? '↺ Marcar como pendente' : '✓ Marcar como visitado'}
-      </button>
+      <strong>${escHtml(m.mupi)}</strong> <span style="color:#86868b">(${tipoLabelPt(m.tipo)})</span><br>
+      <span style="color:#86868b">${escHtml(m.morada)}</span><br>
+      <a href="${gmaps}" target="_blank" rel="noopener" style="display:inline-block; margin-top:6px; color:#0071e3; font-weight:600; text-decoration:none;">📍 Abrir no Google Maps</a>
     `);
     mapMarkers.push(marker);
     bounds.push([m.lat, m.lng]);
@@ -2632,268 +2558,12 @@ function showMapCampaign(name) {
   }
 
   document.getElementById('mapStats').innerHTML =
-    `<strong style="color:var(--text)">${name}</strong> — <span style="color:var(--accent); font-weight:600">${mupis.length} localizações</span>` +
-    ` <span style="color:var(--muted)">(${mupis.length - visitedCount} por visitar, ${visitedCount} visitados)</span>`;
-}
-
-function toggleMapVisited(campName, key) {
-  state.mapVisited = state.mapVisited || {};
-  if (state.mapVisited[key]) delete state.mapVisited[key];
-  else state.mapVisited[key] = true;
-  saveState();
+    `<strong style="color:var(--text)">${escHtml(name)}</strong> — <span style="color:var(--accent); font-weight:600">${mupis.length} localizações</span>`;
 }
 
 function clearMapMarkers() {
   mapMarkers.forEach(m => m.remove());
   mapMarkers = [];
-}
-
-
-// ── ROUTE PLANNING ────────────────────────────────────────────
-function toggleSetStartMode() {
-  settingStart = !settingStart;
-  const btn = document.getElementById('setStartBtn');
-  btn.classList.toggle('active', settingStart);
-  btn.textContent = settingStart ? '📍 Toca no mapa para marcar…' : '📍 Definir ponto de partida';
-  if (settingStart) showToast('Toca no mapa onde vais começar');
-}
-
-function onMapClickForStart(e) {
-  if (!settingStart) return;
-  setRouteStart(e.latlng.lat, e.latlng.lng);
-  settingStart = false;
-  const btn = document.getElementById('setStartBtn');
-  if (btn) { btn.classList.remove('active'); btn.textContent = '📍 Definir ponto de partida'; }
-}
-
-function setRouteStart(lat, lng) {
-  state.routeStart = { lat, lng };
-  saveState();
-  placeStartMarker(lat, lng);
-  showToast('✓ Ponto de partida definido');
-}
-
-function placeStartMarker(lat, lng) {
-  if (!leafletMap) return;
-  if (startMarker) { startMarker.remove(); startMarker = null; }
-  startMarker = L.marker([lat, lng], {
-    draggable: true,
-    icon: L.divIcon({ className: '', html: '<div class="route-start-icon">🚩</div>', iconSize: [28, 28], iconAnchor: [14, 14] })
-  }).addTo(leafletMap).bindPopup('Ponto de partida');
-  startMarker.on('dragend', () => {
-    const pos = startMarker.getLatLng();
-    state.routeStart = { lat: pos.lat, lng: pos.lng };
-    saveState();
-    showToast('✓ Ponto de partida atualizado — recalcula a rota');
-  });
-}
-
-function haversine(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const toRad = d => d * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
-  return R * 2 * Math.asin(Math.sqrt(a));
-}
-
-function pathDistance(start, route) {
-  let d = 0, prev = start;
-  route.forEach(p => { d += haversine(prev.lat, prev.lng, p.lat, p.lng); prev = p; });
-  return d;
-}
-
-function nearestNeighborRoute(start, points) {
-  const remaining = [...points];
-  const route = [];
-  let current = start;
-  while (remaining.length) {
-    let bestIdx = 0, bestDist = Infinity;
-    remaining.forEach((p, i) => {
-      const d = haversine(current.lat, current.lng, p.lat, p.lng);
-      if (d < bestDist) { bestDist = d; bestIdx = i; }
-    });
-    current = remaining.splice(bestIdx, 1)[0];
-    route.push(current);
-  }
-  return route;
-}
-
-function twoOpt(start, route) {
-  let best = route, bestDist = pathDistance(start, best);
-  let improved = true;
-  while (improved) {
-    improved = false;
-    for (let i = 0; i < best.length - 1; i++) {
-      for (let j = i + 1; j < best.length; j++) {
-        const candidate = best.slice(0, i).concat(best.slice(i, j + 1).reverse(), best.slice(j + 1));
-        const d = pathDistance(start, candidate);
-        if (d < bestDist - 1e-9) { best = candidate; bestDist = d; improved = true; }
-      }
-    }
-  }
-  return best;
-}
-
-function clearRoute() {
-  if (routeLine) { routeLine.remove(); routeLine = null; }
-  routeStopMarkers.forEach(m => m.remove());
-  routeStopMarkers = [];
-  const resEl = document.getElementById('routeResult');
-  if (resEl) { resEl.style.display = 'none'; resEl.innerHTML = ''; }
-}
-
-function calculateRoute() {
-  if (!state.routeStart) {
-    showToast('❌ Define primeiro o ponto de partida');
-    toggleSetStartMode();
-    return;
-  }
-  if (!state.activeWeek || !state.weeks[state.activeWeek]) {
-    showToast('❌ Não há campanhas carregadas nesta semana');
-    return;
-  }
-
-  const start = state.routeStart;
-  const campaigns = state.weeks[state.activeWeek].campaigns || [];
-
-  // 1. Somar, por nome de campanha, quantas fotos de cada rede ainda faltam
-  //    (soma de todas as vendas/suportes com esse nome de campanha)
-  const needs = {};
-  campaigns.forEach(c => {
-    const name = (c.campanha || '').trim();
-    if (!name) return;
-    const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-    if (!needs[name]) needs[name] = { rua: 0, metro: 0, ip: 0 };
-    needs[name].rua   += Math.max(0, (c.r  || 0) - (p.r  || 0));
-    needs[name].metro += Math.max(0, (c.m  || 0) - (p.m  || 0));
-    needs[name].ip    += Math.max(0, (c.ip || 0) - (p.ip || 0));
-  });
-
-  // 2. Para cada campanha em falta, escolher localizações pendentes do tipo certo
-  //    (as mais próximas do ponto de partida primeiro), na quantidade exata que falta
-  const stops = [];
-  const shortages = [];
-  const involvedCampaigns = new Set();
-
-  Object.keys(needs).forEach(name => {
-    const need = needs[name];
-    if (need.rua + need.metro + need.ip === 0) return;
-    const pool = poolForCampaign(name);
-
-    ['rua', 'metro', 'ip'].forEach(tipo => {
-      const needed = need[tipo];
-      if (needed <= 0) return;
-      const candidates = pool
-        .filter(p => (p.tipo || 'rua') === tipo)
-        .filter(p => !(state.mapVisited || {})[mapPointKey(name, p)])
-        .map(p => ({ ...p, campanha: name, dist: haversine(start.lat, start.lng, p.lat, p.lng) }))
-        .sort((a, b) => a.dist - b.dist);
-      const chosen = candidates.slice(0, needed);
-      chosen.forEach(p => { stops.push(p); involvedCampaigns.add(name); });
-      if (chosen.length < needed) shortages.push({ campanha: name, tipo, faltam: needed - chosen.length });
-    });
-  });
-
-  clearRoute();
-  clearMapMarkers();
-
-  // 3. Mostrar, como contexto, os restantes pontos das campanhas envolvidas (esbatidos)
-  involvedCampaigns.forEach(name => {
-    poolForCampaign(name).forEach(p => {
-      const isSelected = stops.some(s => s.campanha === name && s.mupi === p.mupi && s.lat === p.lat && s.lng === p.lng && (s.tipo||'rua') === (p.tipo||'rua'));
-      if (isSelected) return;
-      const key = mapPointKey(name, p);
-      const isVisited = !!(state.mapVisited || {})[key];
-      const marker = L.circleMarker([p.lat, p.lng], {
-        radius: 5,
-        fillColor: isVisited ? '#34c759' : tipoColor(p.tipo),
-        color: '#fff', weight: 1.5,
-        opacity: 1, fillOpacity: isVisited ? 0.7 : 0.35
-      }).addTo(leafletMap);
-      marker.bindPopup(`
-        <strong>${p.mupi}</strong> <span style="color:#86868b">(${tipoLabelPt(p.tipo)})</span><br>
-        <span style="color:#86868b">${p.morada}</span><br>
-        <span style="color:#86868b; font-size:11px;">${name}</span><br>
-        <button onclick="toggleMapVisited('${name.replace(/'/g,"\\'")}','${key.replace(/'/g,"\\'")}'); calculateRoute();"
-          style="margin-top:8px; padding:6px 12px; border-radius:6px; border:none;
-                 background:${isVisited ? '#f0f0f2' : '#e9f9ed'}; color:${isVisited ? '#3a3a3c' : '#1a7a35'};
-                 font-size:12px; font-weight:600; cursor:pointer; width:100%;">
-          ${isVisited ? '↺ Marcar como pendente' : '✓ Marcar como visitado'}
-        </button>
-      `);
-      mapMarkers.push(marker);
-    });
-  });
-
-  if (stops.length === 0) {
-    document.getElementById('mapStats').innerHTML = shortages.length
-      ? `⚠️ Há fotos em falta sem localização conhecida (ver lista abaixo)`
-      : `✓ Não há fotos pendentes com localização conhecida nesta semana`;
-    if (shortages.length) {
-      const resEl = document.getElementById('routeResult');
-      resEl.style.display = 'block';
-      resEl.innerHTML = `
-        <div style="background:var(--orange-light); border-radius:var(--radius-sm); padding:12px 14px; font-size:13px; color:var(--orange); font-weight:500;">
-          ⚠️ Faltam localizações para: ${shortages.map(s => `${s.campanha} — ${tipoLabelPt(s.tipo)} ×${s.faltam}`).join('; ')}
-        </div>`;
-    }
-    showToast(shortages.length ? '⚠️ Faltam localizações — ver detalhe abaixo' : '✓ Tudo feito nesta semana!');
-    return;
-  }
-
-  // 4. Ordenar as paragens (vizinho-mais-próximo + 2-opt) e desenhar
-  let route = nearestNeighborRoute(start, stops);
-  if (stops.length <= 60) route = twoOpt(start, route);
-
-  const latlngs = [[start.lat, start.lng], ...route.map(p => [p.lat, p.lng])];
-  routeLine = L.polyline(latlngs, { color: '#0071e3', weight: 3, opacity: 0.7, dashArray: '6 8' }).addTo(leafletMap);
-
-  route.forEach((p, i) => {
-    const marker = L.marker([p.lat, p.lng], {
-      icon: L.divIcon({ className: '', html: `<div class="route-num-icon" style="background:${tipoColor(p.tipo)}">${i + 1}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] })
-    }).addTo(leafletMap).bindPopup(`<strong>${i + 1}. ${p.mupi}</strong> (${tipoLabelPt(p.tipo)})<br><span style="color:#86868b">${p.morada}</span><br><span style="color:#86868b; font-size:11px;">${p.campanha}</span>`);
-    routeStopMarkers.push(marker);
-  });
-
-  leafletMap.fitBounds(latlngs, { padding: [30, 30] });
-
-  const totalKm = pathDistance(start, route);
-  let prev = start;
-  const rows = route.map((p, i) => {
-    const d = haversine(prev.lat, prev.lng, p.lat, p.lng);
-    prev = p;
-    const key = mapPointKey(p.campanha, p);
-    return `
-      <div class="route-stop" onclick="toggleMapVisited('${p.campanha.replace(/'/g,"\\'")}','${key.replace(/'/g,"\\'")}'); calculateRoute();">
-        <div class="route-stop-num" style="background:${tipoColor(p.tipo)}">${i + 1}</div>
-        <div class="route-stop-info">
-          <div class="route-stop-name">${p.mupi} <span class="tag ${p.tipo}" style="margin-left:4px;">${tipoLabelPt(p.tipo).toUpperCase()}</span></div>
-          <div class="route-stop-addr">${p.morada} · ${p.campanha}</div>
-        </div>
-        <div class="route-stop-dist">${d.toFixed(1)} km</div>
-      </div>`;
-  }).join('');
-
-  const shortageHtml = shortages.length ? `
-    <div style="background:var(--orange-light); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:10px; font-size:12px; color:var(--orange); font-weight:500;">
-      ⚠️ Sem localização conhecida para: ${shortages.map(s => `${s.campanha} — ${tipoLabelPt(s.tipo)} ×${s.faltam}`).join('; ')}
-    </div>` : '';
-
-  const resEl = document.getElementById('routeResult');
-  resEl.style.display = 'block';
-  resEl.innerHTML = `
-    ${shortageHtml}
-    <div class="route-summary">
-      <span>🧭 ${route.length} paragens</span>
-      <span>${totalKm.toFixed(1)} km (linha reta)</span>
-    </div>
-    ${rows}
-  `;
-  document.getElementById('mapStats').innerHTML =
-    `<strong style="color:var(--text)">Rota da semana ${state.activeWeek}</strong> — <span style="color:var(--accent); font-weight:600">${route.length} paragens em ${involvedCampaigns.size} campanhas</span>`;
-  showToast('✓ Rota calculada — toca numa paragem para a marcar como visitada');
 }
 
 // ── INIT ───────────────────────────────────────────────────────
