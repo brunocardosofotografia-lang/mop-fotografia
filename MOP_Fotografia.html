@@ -424,6 +424,8 @@
   .edit-input:focus { border-color:var(--accent); }
   .edit-qty { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
   .edit-qty label { font-size:12px; color:var(--muted); font-weight:600; display:block; margin-bottom:4px; }
+  .edit-adj { font-size:12px; color:var(--orange); background:var(--orange-light); border-radius:var(--radius-sm); padding:9px 12px; margin-top:14px; line-height:1.5; }
+  .edit-adj button { background:none; border:none; color:var(--accent); font-size:12px; font-weight:600; cursor:pointer; padding:0; margin-left:4px; }
   .edit-meta { font-size:11px; color:var(--muted); margin-top:14px; }
   .link-section { font-size:12px; color:var(--muted); font-weight:600; margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.03em; }
 
@@ -1211,16 +1213,7 @@ function renderCards() {
     if (c.m > 0) counters.push(buildCounter(id, 'm', p.m, c.m, 'MT'));
     if (c.ip > 0) counters.push(buildCounter(id, 'ip', p.ip, c.ip, 'IP'));
 
-    // Ajuste automático (confronto com os ficheiros de localizações) + botão Locais
-    let adjHtml = '';
-    const zonesAdj = c.adj ? [c.adj.r && 'Rua', c.adj.m && 'Metro', c.adj.ip && 'IP'].filter(Boolean) : [];
-    if (zonesAdj.length) {
-      adjHtml = `<div class="adj-badge">⚙️ Ajustado: sem ${zonesAdj.join('/')} nos ficheiros<button onclick="revertAdjustment(event,'${id}')">repor</button></div>`;
-    } else if (isMupi(c) && (state.adjOff || {})[id]) {
-      adjHtml = `<div class="adj-badge">Ajuste desativado<button onclick="reapplyAdjustment(event,'${id}')">reaplicar</button></div>`;
-    }
-    const tomiHtml = c.tomiAdj ? `<div class="adj-badge">⚙️ Metro 1 (em vez de 2): a campanha também existe em Tomi</div>` : '';
-    const editedHtml = c.edited ? `<div class="adj-badge" style="color:var(--accent); background:var(--accent-light);">✏️ Editado manualmente</div>` : '';
+    // Botões Locais / Editar
     const locHtml = `<div style="padding:0 16px 8px 49px; display:flex; gap:8px; flex-wrap:wrap;">` +
       (isMupi(c) ? `<button class="loc-btn" onclick="openStations('${id}')">🚉 Locais</button>` : '') +
       `<button class="loc-btn" style="background:var(--surface2); color:var(--text2);" onclick="openEdit('${id}')">✏️ Editar</button></div>`;
@@ -1242,9 +1235,6 @@ function renderCards() {
         ${counters.length ? `<div class="card-photos">${counters.join('')}</div>` : ''}
         ${c.rede ? `<div class="card-notes" style="color:var(--muted)">📍 ${c.rede}</div>` : ''}
         ${c.notas ? `<div class="card-notes">📌 ${c.notas}</div>` : ''}
-        ${editedHtml}
-        ${tomiHtml}
-        ${adjHtml}
         ${locHtml}
         <div style="padding:0 16px 10px 49px;">
           <button onclick="deleteCampaign(event,'${id}')" style="font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:0; font-weight:500;">🗑 Apagar campanha</button>
@@ -2292,6 +2282,16 @@ function openEdit(id) {
   const c = findActiveCampaign(id);
   if (!c) { showToast('Campanha não encontrada'); return; }
   window._editId = id;
+  // Mupis analógicos: ajuste automático pelos ficheiros de localizações (desfazer / reaplicar)
+  let adjBlock = '';
+  if (isMupi(c)) {
+    const zones = c.adj ? [c.adj.r && 'Rua', c.adj.m && 'Metro', c.adj.ip && 'IP'].filter(Boolean) : [];
+    if (zones.length) {
+      adjBlock = `<div class="edit-adj">⚙️ Ajustado automaticamente: sem ${zones.join('/')} nos ficheiros de localizações.<button onclick="adjFromEdit('${id}', true)">Desfazer ajuste</button></div>`;
+    } else if ((state.adjOff || {})[id]) {
+      adjBlock = `<div class="edit-adj">Ajuste automático desativado para esta campanha.<button onclick="adjFromEdit('${id}', false)">Reaplicar ajuste</button></div>`;
+    }
+  }
   document.getElementById('editBody').innerHTML = `
     <label class="edit-label" style="margin-top:0">Campanha</label>
     <input class="edit-input" id="editNome" value="${escHtml(c.campanha)}">
@@ -2303,12 +2303,19 @@ function openEdit(id) {
       <div><label>Metro</label><input class="edit-input" id="editM" type="number" inputmode="numeric" min="0" max="99" value="${c.m || 0}"></div>
       <div><label>IP</label><input class="edit-input" id="editIP" type="number" inputmode="numeric" min="0" max="99" value="${c.ip || 0}"></div>
     </div>
+    ${adjBlock}
     <div class="btn-row" style="margin-top:18px;">
       <button class="btn btn-primary" style="flex:2" onclick="saveEdit()">Guardar</button>
       ${c.edited ? '<button class="btn btn-ghost" style="flex:1" onclick="resetEdit()">Repor automático</button>' : ''}
     </div>
     <div class="edit-meta">${escHtml(c.venda)} · ${escHtml(suporteLabel(c))}</div>`;
   openSheet('editSheet');
+}
+
+function adjFromEdit(id, off) {
+  const stub = { stopPropagation() {} };
+  if (off) revertAdjustment(stub, id); else reapplyAdjustment(stub, id);
+  openEdit(id);
 }
 
 function saveEdit() {
