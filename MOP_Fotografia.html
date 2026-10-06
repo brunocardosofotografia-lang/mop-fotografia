@@ -187,9 +187,10 @@
 
   .card-sub { font-size:12px; color:var(--muted); line-height:1.4; }
   .card-note-hl {
-    margin:0 16px 10px 49px; padding:8px 11px; border-radius:9px;
+    margin:0 16px 8px 49px; padding:4px 9px; border-radius:7px;
+    width:fit-content; max-width:calc(100% - 65px);
     background:var(--orange-light); color:var(--orange);
-    font-size:13px; font-weight:600; line-height:1.4;
+    font-size:12px; font-weight:600; line-height:1.35;
   }
   .card-rede { padding:0 16px 8px 49px; font-size:11px; color:var(--muted); }
   .card-missing { font-size:15px; font-weight:700; color:var(--red); white-space:nowrap; align-self:center; }
@@ -197,7 +198,7 @@
 
   .card-photos {
     padding: 0 16px 10px 49px;
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
   }
   .photo-counter {
     display: flex; align-items: center; gap: 8px;
@@ -235,6 +236,8 @@
   .chip.zone.ip { color:var(--orange); }
   .chip.zone b { font-size:17px; margin-left:4px; }
   .chip.zone.active { color:#fff; }
+  .zone-note { font-size:12px; color:var(--muted); background:var(--surface2); border-radius:var(--radius-sm); padding:9px 12px; margin-bottom:10px; line-height:1.5; }
+  .zone-note button { background:none; border:none; color:var(--accent); font-size:12px; font-weight:600; cursor:pointer; padding:0; margin-left:6px; }
   .done-toggle {
     width:100%; margin:6px 0 10px; padding:12px; border:1px dashed var(--border);
     background:transparent; border-radius:var(--radius-sm); color:var(--muted);
@@ -933,7 +936,7 @@ function processRows(rows, weekName) {
   ];
   state.weeks[weekName].loaded = new Date().toLocaleDateString('pt');
   state.activeWeek = weekName;
-  state.activeType = 'digital'; state.activeTypeFilter = 'all';
+  state.activeType = 'digital'; state.activeTypeFilter = 'all'; state.activeZone = 'all';
   applyDigitalRules(weekName);
   saveState();
 
@@ -1241,7 +1244,8 @@ function renderCards() {
 
   // Campanhas aplicáveis + estado (global ou da zona)
   const items = [];
-  visibleBase().forEach(c => {
+  const base = visibleBase();
+  base.forEach(c => {
     const d = isDoneFor(c, zone);
     if (d === null) return; // zona não se aplica
     items.push({ c, done: d });
@@ -1276,6 +1280,9 @@ function renderCards() {
       if (_showDone) html += doneItems.map(x => buildCard(x.c, zone)).join('');
     }
     if (!items.length) html = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nenhuma campanha encontrada</div></div>';
+  }
+  if (zoneMode) {
+    html = `<div class="zone-note">Zona ${zoneName}: só campanhas com fotos de ${zoneName} (${items.length} de ${base.length}) <button onclick="setZone('${zone}')">Ver todas</button></div>` + html;
   }
   list.innerHTML = html;
 }
@@ -1778,7 +1785,7 @@ function processAnalogRows(rows, weekName) {
     ...campaigns
   ];
   state.activeWeek = weekName;
-  state.activeType = 'analog'; state.activeTypeFilter = 'all';
+  state.activeType = 'analog'; state.activeTypeFilter = 'all'; state.activeZone = 'all';
   applyLocationAdjustments(weekName);
   saveState();
 
