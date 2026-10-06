@@ -1081,7 +1081,7 @@ function renderFilterBar() {
   bar.innerHTML = mainBtns;
 
   // Linha 2 — tipo de suporte (combina-se com a linha 1)
-  let subBtns = `<button class="filter-btn" onclick="setFilter('all', this, 'type')">Todos os suportes</button>`;
+  let subBtns = '';
   if (!isAnalog) subBtns += `
     <button class="filter-btn" onclick="setFilter('tv', this, 'type')">Ecrãs TV</button>
     <button class="filter-btn" onclick="setFilter('leds', this, 'type')">Led's</button>
@@ -1107,9 +1107,11 @@ function renderFilterBar() {
   if (statusBtn) statusBtn.classList.add('active');
   else { bar.querySelector('.filter-btn').classList.add('active'); state.activeStatusFilter = 'all'; }
 
-  const typeBtn = sub.querySelector(`[onclick="setFilter('${state.activeTypeFilter}', this, 'type')"]`);
-  if (typeBtn) typeBtn.classList.add('active');
-  else { sub.querySelector('.filter-btn').classList.add('active'); state.activeTypeFilter = 'all'; }
+  if (state.activeTypeFilter !== 'all') {
+    const typeBtn = sub.querySelector(`[onclick="setFilter('${state.activeTypeFilter}', this, 'type')"]`);
+    if (typeBtn) typeBtn.classList.add('active');
+    else state.activeTypeFilter = 'all';
+  }
 }
 
 // ── SUPORTE LABEL ─────────────────────────────────────────────
@@ -1141,11 +1143,11 @@ function setType(type, btn) {
 }
 
 function setFilter(f, btn, kind) {
-  if (kind === 'type') state.activeTypeFilter = f;
+  if (kind === 'type') state.activeTypeFilter = (state.activeTypeFilter === f) ? 'all' : f; // tocar de novo desliga
   else state.activeStatusFilter = f;
   const container = kind === 'type' ? document.getElementById('filterBarSub') : document.getElementById('filterBar');
   container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  if (kind !== 'type' || state.activeTypeFilter !== 'all') btn.classList.add('active');
   renderCards();
 }
 
@@ -1204,11 +1206,6 @@ function renderCards() {
     const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
     const isDone = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
 
-    const tags = [];
-    if (c.r > 0) tags.push(`<span class="tag rua">RUA ×${c.r}</span>`);
-    if (c.m > 0) tags.push(`<span class="tag metro">METRO ×${c.m}</span>`);
-    if (c.ip > 0) tags.push(`<span class="tag ip">IP ×${c.ip}</span>`);
-
     const counters = [];
     if (c.r > 0) counters.push(buildCounter(id, 'r', p.r, c.r, 'RUA'));
     if (c.m > 0) counters.push(buildCounter(id, 'm', p.m, c.m, 'MT'));
@@ -1239,7 +1236,6 @@ function renderCards() {
             <div class="card-meta">
               <span class="tag">${c.venda}</span>
               <span class="tag">${suporteLabel(c)}</span>
-              ${tags.join('')}
             </div>
           </div>
         </div>
