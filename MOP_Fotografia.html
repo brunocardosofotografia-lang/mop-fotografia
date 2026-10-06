@@ -419,6 +419,12 @@
   .link-head { padding:11px 13px; font-size:13px; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; gap:8px; }
   .link-pool { padding:4px 13px 12px; border-top:1px solid var(--border-light); max-height:260px; overflow-y:auto; }
   .link-opt { display:flex; align-items:flex-start; gap:8px; padding:6px 0; font-size:13px; }
+  .edit-label { display:block; font-size:12px; font-weight:600; color:var(--muted); margin:14px 0 6px; text-transform:uppercase; letter-spacing:0.03em; }
+  .edit-input { width:100%; padding:11px 13px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); font-size:16px; font-family:inherit; outline:none; box-sizing:border-box; }
+  .edit-input:focus { border-color:var(--accent); }
+  .edit-qty { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .edit-qty label { font-size:12px; color:var(--muted); font-weight:600; display:block; margin-bottom:4px; }
+  .edit-meta { font-size:11px; color:var(--muted); margin-top:14px; }
   .link-section { font-size:12px; color:var(--muted); font-weight:600; margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.03em; }
 
 
@@ -658,6 +664,13 @@
   </div>
 </div>
 
+<div class="sheet-overlay" id="editSheet" onclick="if(event.target===this) closeSheet('editSheet')">
+  <div class="sheet">
+    <div class="sheet-head"><div class="sheet-title">Editar campanha</div><button class="sheet-close" onclick="closeSheet('editSheet')">✕</button></div>
+    <div class="sheet-body" id="editBody"></div>
+  </div>
+</div>
+
 <div class="sheet-overlay" id="missingSheet" onclick="if(event.target===this) closeSheet('missingSheet')">
   <div class="sheet">
     <div class="sheet-head"><div class="sheet-title" id="missingTitle">O que falta</div><button class="sheet-close" onclick="closeSheet('missingSheet')">✕</button></div>
@@ -709,6 +722,7 @@ var state = {
   locIgnore: {},    // { chaveCampanha: true } — campanhas a não ajustar
   adjOff: {},       // { campaignId: true } — ajustes desfeitos pelo utilizador
   locFiles: {},     // { semana: { rua: true, metroip: true } } — ficheiros carregados
+  edits: {},        // { 'S40|campaignId': { campanha?, notas?, q?: {r,m,ip} } } — edições manuais
   currentTab: 'home',
   timestamps: []  // [{ ts, campanha, suporte, type }] — registo de marcações
 };
@@ -725,7 +739,7 @@ function loadState() {
 }
 
 function ensureState() {
-  ['weeks', 'progress', 'mapData', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
+  ['weeks', 'progress', 'mapData', 'edits', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
     if (!state[k] || typeof state[k] !== 'object') state[k] = {};
   });
   if (!state.activeStatusFilter) state.activeStatusFilter = 'all';
@@ -895,6 +909,7 @@ function processRows(rows, weekName) {
   ];
   state.weeks[weekName].loaded = new Date().toLocaleDateString('pt');
   state.activeWeek = weekName;
+  applyDigitalRules(weekName);
   saveState();
 
   // Show stats
@@ -1207,9 +1222,11 @@ function renderCards() {
     } else if (isMupi(c) && (state.adjOff || {})[id]) {
       adjHtml = `<div class="adj-badge">Ajuste desativado<button onclick="reapplyAdjustment(event,'${id}')">reaplicar</button></div>`;
     }
-    const locHtml = isMupi(c)
-      ? `<div style="padding:0 16px 8px 49px;"><button class="loc-btn" onclick="openStations('${id}')">🚉 Locais</button></div>`
-      : '';
+    const tomiHtml = c.tomiAdj ? `<div class="adj-badge">⚙️ Metro 1 (em vez de 2): a campanha também existe em Tomi</div>` : '';
+    const editedHtml = c.edited ? `<div class="adj-badge" style="color:var(--accent); background:var(--accent-light);">✏️ Editado manualmente</div>` : '';
+    const locHtml = `<div style="padding:0 16px 8px 49px; display:flex; gap:8px; flex-wrap:wrap;">` +
+      (isMupi(c) ? `<button class="loc-btn" onclick="openStations('${id}')">🚉 Locais</button>` : '') +
+      `<button class="loc-btn" style="background:var(--surface2); color:var(--text2);" onclick="openEdit('${id}')">✏️ Editar</button></div>`;
 
     return `
       <div class="card ${isDone ? 'done' : ''}" id="card_${id}">
@@ -1229,6 +1246,8 @@ function renderCards() {
         ${counters.length ? `<div class="card-photos">${counters.join('')}</div>` : ''}
         ${c.rede ? `<div class="card-notes" style="color:var(--muted)">📍 ${c.rede}</div>` : ''}
         ${c.notas ? `<div class="card-notes">📌 ${c.notas}</div>` : ''}
+        ${editedHtml}
+        ${tomiHtml}
         ${adjHtml}
         ${locHtml}
         <div style="padding:0 16px 10px 49px;">
@@ -1324,6 +1343,8 @@ function deleteCampaign(e, id) {
   }
   // Remove progress
   delete state.progress[id];
+  delete state.edits[state.activeWeek + '|' + id];
+  applyDigitalRules(state.activeWeek);
   saveState();
   renderAll();
   showToast('Campanha apagada');
@@ -1715,6 +1736,7 @@ function exportProgress() {
     activeWeek: state.activeWeek,
     activeType: state.activeType,
     mapData: state.mapData || {},
+    edits: state.edits || {},
     locAliases: state.locAliases || {},
     locIgnore: state.locIgnore || {},
     adjOff: state.adjOff || {},
@@ -1746,6 +1768,7 @@ function importProgress(file) {
       if (data.activeWeek) state.activeWeek = data.activeWeek;
       if (data.activeType) state.activeType = data.activeType;
       if (data.mapData) state.mapData = { ...(state.mapData || {}), ...data.mapData };
+      if (data.edits) state.edits = { ...(state.edits || {}), ...data.edits };
       if (data.locAliases) state.locAliases = { ...(state.locAliases || {}), ...data.locAliases };
       if (data.locIgnore) state.locIgnore = { ...(state.locIgnore || {}), ...data.locIgnore };
       if (data.adjOff) state.adjOff = { ...(state.adjOff || {}), ...data.adjOff };
@@ -1826,19 +1849,36 @@ function classifyDigital(formato, rede, notas, campanha) {
 
 // Corrige campanhas já guardadas (tipo + quantidades pelas regras atuais)
 function migrateClassification() {
-  let changed = false;
-  Object.values(state.weeks || {}).forEach(w => {
-    (w.campaigns || []).forEach(c => {
-      if (c.subtype === 'analog') return;
-      const k = classifyDigital(c.suporte, c.rede, c.notas, c.campanha);
-      if (!k.tipo) return; // formato não reconhecido (ex.: colunas lidas mal) → não mexer
-      if (c.tipo !== k.tipo || (c.subtype || '') !== k.subtype || c.r !== k.r || c.m !== k.m || c.ip !== k.ip) {
-        c.tipo = k.tipo; c.subtype = k.subtype; c.r = k.r; c.m = k.m; c.ip = k.ip;
-        changed = true;
-      }
-    });
+  Object.keys(state.weeks || {}).forEach(applyDigitalRules);
+  saveState();
+}
+
+// Chave para comparar nomes de campanha entre TV e Tomi:
+// ignora "N temas", datas, espaços/pontuação e números finais ("CHOCO TRIO - 2" = "CHOCO TRIO - 2 TEMAS")
+function tomiKey(name) {
+  const t = nameTokens(cleanCampaignName(name));
+  while (t.length > 1 && /^\d+$/.test(t[t.length - 1])) t.pop();
+  return t.join('');
+}
+
+// Regras dos digitais: tipo + quantidades automáticas, incluindo
+// TV: se a campanha também existe em Tomi (mesma semana), Metro passa de 2 para 1.
+function applyDigitalRules(week) {
+  const w = state.weeks[week];
+  if (!w) return;
+  const digital = w.campaigns.filter(c => c.subtype !== 'analog');
+  const tomiKeys = new Set(digital.filter(c => c.tipo === 'tomi').map(c => tomiKey(origName(c))));
+  digital.forEach(c => {
+    const k = classifyDigital(c.suporte, c.rede, c.notasOrig != null ? c.notasOrig : c.notas, origName(c));
+    if (!k.tipo) return; // formato não reconhecido (ex.: colunas lidas mal) → não mexer
+    let m = k.m;
+    c.tomiAdj = false;
+    if (k.tipo === 'tv' && m === 2 && !/\bTVI\b/.test(normTxt(origName(c))) && tomiKeys.has(tomiKey(origName(c)))) {
+      m = 1; c.tomiAdj = true;
+    }
+    c.tipo = k.tipo; c.subtype = k.subtype; c.r = k.r; c.m = m; c.ip = k.ip;
   });
-  if (changed) saveState();
+  reapplyEdits(week);
 }
 
 // Filtro por tipo de suporte (digitais: tipo guardado; analógicos: texto do suporte)
@@ -1950,8 +1990,8 @@ function autoLinkMap(week) {
   const present = Object.keys(locEntriesByName(week));
   const keys = {};
   weekMupiCampaigns(week).forEach(c => {
-    const k = cleanKey(c.campanha);
-    if (k && !keys[k]) keys[k] = nameTokens(cleanCampaignName(c.campanha));
+    const k = cleanKey(origName(c));
+    if (k && !keys[k]) keys[k] = nameTokens(cleanCampaignName(origName(c)));
   });
   const out = {};
   present.forEach(L => {
@@ -1975,7 +2015,7 @@ function autoLinkMap(week) {
 }
 
 function linkedNamesFor(c, week) {
-  const key = cleanKey(c.campanha);
+  const key = cleanKey(origName(c));
   if ((state.locIgnore || {})[key]) return [];
   const present = new Set(Object.keys(locEntriesByName(week)));
   const out = new Set();
@@ -2014,6 +2054,7 @@ function applyLocationAdjustments(week) {
     }
     c.r = r; c.m = m; c.ip = ip;
   });
+  reapplyEdits(week);
   saveState();
 }
 
@@ -2036,7 +2077,7 @@ function pendingLinkCount(week) {
   const seen = {};
   let n = 0;
   weekMupiCampaigns(week).forEach(c => {
-    const k = cleanKey(c.campanha);
+    const k = cleanKey(origName(c));
     if (!k || seen[k]) return;
     seen[k] = true;
     if (state.locIgnore[k]) return;
@@ -2207,10 +2248,124 @@ function pruneLocations(keep) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// EDIÇÃO MANUAL (nome, observações, quantidades) — sobrevive a reimportações
+// ══════════════════════════════════════════════════════════════
+function editKey(week, c) { return week + '|' + campaignId(c); }
+function origName(c) { return c.campanhaOrig != null ? c.campanhaOrig : c.campanha; }
+function findActiveCampaign(id) {
+  const w = state.weeks[state.activeWeek];
+  return w ? (w.campaigns.find(c => campaignId(c) === id) || null) : null;
+}
+
+// Aplica as edições guardadas sobre os valores automáticos da semana
+function reapplyEdits(week) {
+  const w = state.weeks[week];
+  if (!w) return;
+  const edits = state.edits || {};
+  w.campaigns.forEach(c => {
+    const e = edits[editKey(week, c)];
+    if (!e) return;
+    if (!c.edited) { c.campanhaOrig = c.campanha; c.notasOrig = c.notas || ''; }
+    if (e.campanha != null) c.campanha = e.campanha;
+    if (e.notas != null) c.notas = e.notas;
+    if (e.q) ['r', 'm', 'ip'].forEach(z => {
+      if (e.q[z] != null) { c[z] = e.q[z]; if (c.adj) delete c.adj[z]; if (z === 'm') c.tomiAdj = false; }
+    });
+    if (c.adj && !Object.keys(c.adj).length) c.adj = null;
+    c.edited = true;
+  });
+}
+
+// Repõe nome/observações/quantidades automáticos de uma campanha
+function resetCampaignToAuto(c) {
+  if (c.edited) {
+    c.campanha = c.campanhaOrig != null ? c.campanhaOrig : c.campanha;
+    c.notas = c.notasOrig != null ? c.notasOrig : c.notas;
+  }
+  c.edited = false;
+  delete c.campanhaOrig; delete c.notasOrig;
+  if (c.subtype === 'analog') {
+    if (c.base) { c.r = c.base.r; c.m = c.base.m; c.ip = c.base.ip; }
+  } else {
+    const k = classifyDigital(c.suporte, c.rede, c.notas, c.campanha);
+    if (k.tipo) { c.r = k.r; c.m = k.m; c.ip = k.ip; }
+  }
+}
+
+function openEdit(id) {
+  const c = findActiveCampaign(id);
+  if (!c) { showToast('Campanha não encontrada'); return; }
+  window._editId = id;
+  document.getElementById('editBody').innerHTML = `
+    <label class="edit-label" style="margin-top:0">Campanha</label>
+    <input class="edit-input" id="editNome" value="${escHtml(c.campanha)}">
+    <label class="edit-label">Observações</label>
+    <textarea class="edit-input" id="editNotas" rows="3">${escHtml(c.notas || '')}</textarea>
+    <label class="edit-label">Fotos a fotografar</label>
+    <div class="edit-qty">
+      <div><label>Rua</label><input class="edit-input" id="editR" type="number" inputmode="numeric" min="0" max="99" value="${c.r || 0}"></div>
+      <div><label>Metro</label><input class="edit-input" id="editM" type="number" inputmode="numeric" min="0" max="99" value="${c.m || 0}"></div>
+      <div><label>IP</label><input class="edit-input" id="editIP" type="number" inputmode="numeric" min="0" max="99" value="${c.ip || 0}"></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;">
+      <button class="btn btn-primary" style="flex:2" onclick="saveEdit()">Guardar</button>
+      ${c.edited ? '<button class="btn btn-ghost" style="flex:1" onclick="resetEdit()">Repor automático</button>' : ''}
+    </div>
+    <div class="edit-meta">${escHtml(c.venda)} · ${escHtml(suporteLabel(c))}</div>`;
+  openSheet('editSheet');
+}
+
+function saveEdit() {
+  const c = findActiveCampaign(window._editId);
+  if (!c) return;
+  const week = state.activeWeek;
+  const nome = document.getElementById('editNome').value.trim();
+  const notas = document.getElementById('editNotas').value.trim();
+  if (!nome) { showToast('O nome não pode ficar vazio'); return; }
+  const num = idn => Math.max(0, Math.min(99, parseInt(document.getElementById(idn).value) || 0));
+  const q = { r: num('editR'), m: num('editM'), ip: num('editIP') };
+
+  // 1. voltar ao automático para saber o que é "original"
+  const key = editKey(week, c);
+  delete state.edits[key];
+  resetCampaignToAuto(c);
+  if (c.subtype === 'analog') applyLocationAdjustments(week); else applyDigitalRules(week);
+  const auto = { nome: c.campanha, notas: c.notas || '', r: c.r, m: c.m, ip: c.ip };
+
+  // 2. guardar só o que o utilizador alterou
+  const e = {};
+  if (nome !== auto.nome) e.campanha = nome;
+  if (notas !== auto.notas) e.notas = notas;
+  const qq = {};
+  ['r', 'm', 'ip'].forEach(z => { if (q[z] !== auto[z]) qq[z] = q[z]; });
+  if (Object.keys(qq).length) e.q = qq;
+  if (Object.keys(e).length) state.edits[key] = e;
+
+  reapplyEdits(week);
+  saveState();
+  closeSheet('editSheet');
+  renderAll();
+  showToast(Object.keys(e).length ? '✓ Campanha editada' : 'Sem alterações');
+}
+
+function resetEdit() {
+  const c = findActiveCampaign(window._editId);
+  if (!c) return;
+  const week = state.activeWeek;
+  delete state.edits[editKey(week, c)];
+  resetCampaignToAuto(c);
+  if (c.subtype === 'analog') applyLocationAdjustments(week); else applyDigitalRules(week);
+  saveState();
+  closeSheet('editSheet');
+  renderAll();
+  showToast('Valores automáticos repostos');
+}
+
+// ══════════════════════════════════════════════════════════════
 // POP-UP "LOCAIS" (só nomes das estações Metro/IP)
 // ══════════════════════════════════════════════════════════════
 function openStations(id) {
-  const c = findCampaign(id);
+  const c = findActiveCampaign(id);
   const week = state.activeWeek;
   document.getElementById('stationsTitle').textContent = c ? (c.campanha || 'Locais') : 'Locais';
   const files = (state.locFiles || {})[week] || {};
@@ -2307,7 +2462,7 @@ function openLinkSheet() { _linkOpen = -1; renderLinkSheet(); openSheet('linkShe
 function toggleLinkOpen(i) { _linkOpen = (_linkOpen === i) ? -1 : i; renderLinkSheet(); }
 
 function linkScore(c, L) {
-  const at = nameTokens(cleanCampaignName(c.campanha)).filter(t => t.length >= 3).map(t => t.slice(0, 3));
+  const at = nameTokens(cleanCampaignName(origName(c))).filter(t => t.length >= 3).map(t => t.slice(0, 3));
   return nameTokens(L).filter(t => t.length >= 3).reduce((s, t) => s + (at.includes(t.slice(0, 3)) ? 1 : 0), 0);
 }
 
@@ -2332,7 +2487,7 @@ function renderLinkSheet() {
   const linkedAll = new Set();
   _linkPending = []; _linkLinked = []; _linkIgnored = [];
   camps.forEach(c => {
-    const k = cleanKey(c.campanha);
+    const k = cleanKey(origName(c));
     if (!k || seen[k]) return;
     seen[k] = true;
     if (state.locIgnore[k]) { _linkIgnored.push({ k, c }); return; }
@@ -2366,19 +2521,19 @@ function renderLinkSheet() {
         </div>
       </div>`;
     }
-    html += `<div class="link-card"><div class="link-head" onclick="toggleLinkOpen(${i})"><span>${escHtml(cleanCampaignName(p.c.campanha) || p.c.campanha)}</span><span style="color:var(--muted)">${open ? '▲' : '▼'}</span></div>${pool}</div>`;
+    html += `<div class="link-card"><div class="link-head" onclick="toggleLinkOpen(${i})"><span>${escHtml(cleanCampaignName(origName(p.c)) || origName(p.c))}</span><span style="color:var(--muted)">${open ? '▲' : '▼'}</span></div>${pool}</div>`;
   });
 
   if (_linkLinked.length) {
     html += `<div class="link-section">Ligadas (${_linkLinked.length})</div>`;
     _linkLinked.forEach((p, i) => {
-      html += `<div class="miss-row"><div class="miss-info"><div class="miss-name">${escHtml(cleanCampaignName(p.c.campanha) || p.c.campanha)}</div><div class="miss-meta">${escHtml(p.names.join(', '))}</div></div><button class="loc-btn" onclick="unlinkCampaign(${i})">Desligar</button></div>`;
+      html += `<div class="miss-row"><div class="miss-info"><div class="miss-name">${escHtml(cleanCampaignName(origName(p.c)) || origName(p.c))}</div><div class="miss-meta">${escHtml(p.names.join(', '))}</div></div><button class="loc-btn" onclick="unlinkCampaign(${i})">Desligar</button></div>`;
     });
   }
   if (_linkIgnored.length) {
     html += `<div class="link-section">Não alteradas (${_linkIgnored.length})</div>`;
     _linkIgnored.forEach((p, i) => {
-      html += `<div class="miss-row"><div class="miss-info"><div class="miss-name">${escHtml(cleanCampaignName(p.c.campanha) || p.c.campanha)}</div></div><button class="loc-btn" onclick="relinkCampaign(${i})">Ligar</button></div>`;
+      html += `<div class="miss-row"><div class="miss-info"><div class="miss-name">${escHtml(cleanCampaignName(origName(p.c)) || origName(p.c))}</div></div><button class="loc-btn" onclick="relinkCampaign(${i})">Ligar</button></div>`;
     });
   }
   body.innerHTML = html;
