@@ -185,36 +185,61 @@
   .tag.metro { background: var(--purple-light); color: var(--purple); }
   .tag.ip   { background: var(--orange-light); color: var(--orange); }
 
-  .card-photos {
-    padding: 0 16px 13px 49px;
-    display: flex; gap: 8px; flex-wrap: wrap;
+  .card-sub { font-size:12px; color:var(--muted); line-height:1.4; }
+  .card-note-hl {
+    margin:0 16px 10px 49px; padding:8px 11px; border-radius:9px;
+    background:var(--orange-light); color:var(--orange);
+    font-size:13px; font-weight:600; line-height:1.4;
   }
+  .card-rede { padding:0 16px 8px 49px; font-size:11px; color:var(--muted); }
+  .card-missing { font-size:15px; font-weight:700; color:var(--red); white-space:nowrap; align-self:center; }
+  .card-missing.ok { color:var(--green); }
 
-  .photo-counter {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface2); border-radius: var(--radius-sm);
-    padding: 7px 11px;
+  .card-photos {
+    padding: 0 16px 10px 49px;
+    display: flex; flex-direction: column; gap: 8px;
   }
-  .photo-type { font-size: 11px; color: var(--muted); font-weight: 600; min-width: 26px; }
+  .photo-counter {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border-radius: 12px;
+    padding: 6px 10px;
+  }
+  .photo-type { font-size: 12px; font-weight: 700; min-width: 48px; letter-spacing: 0.02em; color: var(--muted); }
+  .photo-type.r  { color: var(--accent); }
+  .photo-type.m  { color: var(--purple); }
+  .photo-type.ip { color: var(--orange); }
   .counter-controls { display: flex; align-items: center; }
   .counter-btn {
-    width: 28px; height: 28px; border: 1px solid var(--border);
+    width: 48px; height: 48px; border: 1px solid var(--border);
     background: var(--surface); color: var(--text2);
-    font-size: 16px; cursor: pointer; transition: all 0.15s;
+    font-size: 24px; cursor: pointer; transition: all 0.15s;
     display: flex; align-items: center; justify-content: center;
-    user-select: none;
+    user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
   }
-  .counter-btn:first-child { border-radius: 6px 0 0 6px; }
-  .counter-btn:last-child { border-radius: 0 6px 6px 0; }
+  .counter-btn:first-child { border-radius: 10px 0 0 10px; }
+  .counter-btn:last-child { border-radius: 0 10px 10px 0; }
   .counter-btn:active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .counter-val {
-    width: 34px; height: 28px;
+    width: 54px; height: 48px;
     border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
     background: var(--surface); display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 600; color: var(--text2);
+    font-size: 21px; font-weight: 700; color: var(--text2);
   }
   .counter-val.done { color: var(--green); }
-  .counter-total { font-size: 11px; color: var(--muted); font-weight: 500; }
+  .counter-total { font-size: 14px; color: var(--muted); font-weight: 600; }
+
+  /* zonas */
+  .zone-bar { display:flex; gap:8px; margin-bottom:10px; }
+  .chip.zone { flex:1; text-align:center; padding:11px 6px; font-size:14px; color:var(--accent); }
+  .chip.zone.metro { color:var(--purple); }
+  .chip.zone.ip { color:var(--orange); }
+  .chip.zone b { font-size:17px; margin-left:4px; }
+  .chip.zone.active { color:#fff; }
+  .done-toggle {
+    width:100%; margin:6px 0 10px; padding:12px; border:1px dashed var(--border);
+    background:transparent; border-radius:var(--radius-sm); color:var(--muted);
+    font-size:13px; font-weight:600; cursor:pointer;
+  }
 
   .card-notes {
     padding: 0 16px 12px 49px;
@@ -537,7 +562,7 @@
       <button class="type-btn active" data-type="digital" onclick="setType('digital', this)">Digitais</button>
       <button class="type-btn" data-type="analog" onclick="setType('analog', this)">Analógicos</button>
     </div>
-    <button class="btn btn-ghost" style="width:100%; margin-bottom:10px;" onclick="openMissingSheet()">📋 O que falta fotografar</button>
+    <div class="zone-bar" id="zoneBar"></div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="Pesquisar campanha..." oninput="renderCards()">
@@ -673,13 +698,6 @@
   </div>
 </div>
 
-<div class="sheet-overlay" id="missingSheet" onclick="if(event.target===this) closeSheet('missingSheet')">
-  <div class="sheet">
-    <div class="sheet-head"><div class="sheet-title" id="missingTitle">O que falta</div><button class="sheet-close" onclick="closeSheet('missingSheet')">✕</button></div>
-    <div class="sheet-body" id="missingBody"></div>
-  </div>
-</div>
-
 <div class="sheet-overlay" id="stationsSheet" onclick="if(event.target===this) closeSheet('stationsSheet')">
   <div class="sheet">
     <div class="sheet-head"><div class="sheet-title" id="stationsTitle">Locais</div><button class="sheet-close" onclick="closeSheet('stationsSheet')">✕</button></div>
@@ -716,8 +734,10 @@ var state = {
   weeks: {},      // { 'W1': { campaigns: [], loaded: Date } }
   progress: {},   // { 'campaignId': { r: 0, m: 0, ip: 0, done: false } }
   activeWeek: null,
-  activeStatusFilter: 'all',
+  activeStatusFilter: 'pending',
   activeTypeFilter: 'all',
+  activeZone: 'all',
+  uiv: 2,
   activeType: 'digital',
   mapData: {},
   locAliases: {},   // { chaveCampanha: [nomes nos ficheiros de localizações] } — ligações memorizadas
@@ -744,7 +764,9 @@ function ensureState() {
   ['weeks', 'progress', 'mapData', 'edits', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
     if (!state[k] || typeof state[k] !== 'object') state[k] = {};
   });
-  if (!state.activeStatusFilter) state.activeStatusFilter = 'all';
+  if (!state.activeStatusFilter) state.activeStatusFilter = 'pending';
+  if (!state.activeZone) state.activeZone = 'all';
+  if ((state.uiv || 0) < 2) { state.activeStatusFilter = 'pending'; state.uiv = 2; } // novo padrão: "Por fazer"
   if (!state.activeTypeFilter) state.activeTypeFilter = 'all';
 }
 
@@ -911,6 +933,7 @@ function processRows(rows, weekName) {
   ];
   state.weeks[weekName].loaded = new Date().toLocaleDateString('pt');
   state.activeWeek = weekName;
+  state.activeType = 'digital'; state.activeTypeFilter = 'all';
   applyDigitalRules(weekName);
   saveState();
 
@@ -938,6 +961,7 @@ function processRows(rows, weekName) {
       <span class="stat-label">Colunas lidas</span>
       <span class="stat-value" style="font-size:11px">Ref ${colLetter(cols.ref)} · Rede ${colLetter(cols.rede)} · Formato ${colLetter(cols.formato)} · Campanha ${colLetter(cols.campanha)}${cols.loc >= 0 ? ' · Local. ' + colLetter(cols.loc) : ''}</span>
     </div>
+    ${importWeekNote(weekName, 'digital')}
   `;
 
   renderAll();
@@ -1058,7 +1082,7 @@ function renderWeekSelector() {
 
 function selectWeek(w) {
   state.activeWeek = w;
-  state.activeStatusFilter = 'all';
+  state.activeStatusFilter = 'pending';
   state.activeTypeFilter = 'all';
   document.getElementById('currentWeekBadge').textContent = w;
   renderWeekSelector();
@@ -1129,8 +1153,13 @@ function suporteLabel(c) {
 function syncTypeToggle() {
   const btns = document.querySelectorAll('.type-btn');
   if (!btns.length) return; // DOM not ready yet
+  const camps = (state.weeks[state.activeWeek] || {}).campaigns || [];
+  const nAn = camps.filter(c => c.subtype === 'analog').length;
+  const nDg = camps.length - nAn;
   btns.forEach(b => {
-    b.classList.toggle('active', b.getAttribute('data-type') === state.activeType);
+    const t = b.getAttribute('data-type');
+    b.classList.toggle('active', t === state.activeType);
+    b.textContent = (t === 'analog' ? 'Analógicos' : 'Digitais') + (state.activeWeek ? ` (${t === 'analog' ? nAn : nDg})` : '');
   });
 }
 
@@ -1153,102 +1182,154 @@ function setFilter(f, btn, kind) {
   renderCards();
 }
 
+// Estado de uma campanha: global (zona 'all') ou numa zona ('r'|'m'|'ip').
+// true = concluída, false = por fazer, null = a zona não se aplica à campanha.
+function isDoneFor(c, zone) {
+  const p = state.progress[campaignId(c)] || { r: 0, m: 0, ip: 0 };
+  if (zone === 'r' || zone === 'm' || zone === 'ip') {
+    const t = c[zone] || 0;
+    if (t <= 0) return null;
+    return (p[zone] || 0) >= t;
+  }
+  return p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+}
+function zoneRemaining(c, z) {
+  const p = state.progress[campaignId(c)] || { r: 0, m: 0, ip: 0 };
+  return Math.max(0, (c[z] || 0) - (p[z] || 0));
+}
+function matchesSearch(c, search) {
+  return !search || (c.campanha || '').toLowerCase().includes(search) || (c.venda || '').toLowerCase().includes(search);
+}
+// Campanhas visíveis (semana ativa + Digitais/Analógicos + pesquisa + tipo de suporte)
+function visibleBase() {
+  const w = state.weeks[state.activeWeek];
+  if (!w) return [];
+  const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+  const isAnalog = state.activeType === 'analog';
+  return w.campaigns.filter(c =>
+    (c.subtype === 'analog') === isAnalog && matchesSearch(c, search) && matchesTypeFilter(c, state.activeTypeFilter));
+}
+
+function renderZoneBar() {
+  const bar = document.getElementById('zoneBar');
+  if (!bar) return;
+  const base = visibleBase();
+  const zones = [['r', 'Rua', ''], ['m', 'Metro', 'metro'], ['ip', 'IP', 'ip']];
+  bar.innerHTML = zones.map(([z, label, cls]) => {
+    const n = base.reduce((sum, c) => sum + zoneRemaining(c, z), 0);
+    return `<button class="chip zone ${cls} ${state.activeZone === z ? 'active' : ''}" onclick="setZone('${z}')">${label} <b>${n}</b></button>`;
+  }).join('');
+}
+function setZone(z) {
+  state.activeZone = (state.activeZone === z) ? 'all' : z; // tocar de novo desliga
+  saveState();
+  renderCards();
+}
+
+var _showDone = false;
+function toggleDoneSection() { _showDone = !_showDone; renderCards(); }
+
 function renderCards() {
   if (!state.activeWeek || !state.weeks[state.activeWeek]) return;
   renderFilterBar();
+  renderZoneBar();
 
   const campaigns = state.weeks[state.activeWeek].campaigns;
-  const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
   const statusFilter = state.activeStatusFilter;
-  const typeFilter = state.activeTypeFilter;
+  const zone = state.activeZone;
+  const zoneMode = zone === 'r' || zone === 'm' || zone === 'ip';
 
-  let filtered = campaigns.filter(c => {
-    // Filtrar por tipo (digital vs analógico)
-    const _isAnalog = state.activeType === 'analog';
-    if (_isAnalog && c.subtype !== 'analog') return false;
-    if (!_isAnalog && c.subtype === 'analog') return false;
-
-    const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-    const done = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
-
-    if (search && !c.campanha.toLowerCase().includes(search) &&
-        !c.venda.toLowerCase().includes(search)) return false;
-
-    // Filtro de estado
-    if (statusFilter === 'pending' && done) return false;
-    if (statusFilter === 'done' && !done) return false;
-
-    // Filtro de tipo de suporte (combina com o de estado)
-    if (!matchesTypeFilter(c, typeFilter)) return false;
-
-    return true;
+  // Campanhas aplicáveis + estado (global ou da zona)
+  const items = [];
+  visibleBase().forEach(c => {
+    const d = isDoneFor(c, zone);
+    if (d === null) return; // zona não se aplica
+    items.push({ c, done: d });
   });
+  const pending = items.filter(x => !x.done);
+  const doneItems = items.filter(x => x.done);
 
-  // Progress bar
+  // Progress bar (semana inteira)
   const total = campaigns.length;
-  const done = campaigns.filter(c => {
-    const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-    return p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
-  }).length;
-
+  const done = campaigns.filter(c => isDoneFor(c, 'all')).length;
   document.getElementById('progressFill').style.width = total ? `${(done/total)*100}%` : '0%';
   document.getElementById('progressText').textContent = `${done} / ${total} concluídas`;
 
-  // Render cards
   const list = document.getElementById('cardList');
-  if (!filtered.length) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nenhuma campanha encontrada</div></div>';
-    return;
+  const zoneName = zone === 'r' ? 'Rua' : zone === 'm' ? 'Metro' : 'IP';
+  let html = '';
+  if (statusFilter === 'pending') {
+    html = pending.map(x => buildCard(x.c, zone)).join('');
+    if (!pending.length) {
+      html = items.length
+        ? `<div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">${zoneMode ? 'Nada em falta em ' + zoneName : 'Tudo feito'}</div></div>`
+        : '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nenhuma campanha encontrada</div></div>';
+    }
+  } else if (statusFilter === 'done') {
+    html = doneItems.length
+      ? doneItems.map(x => buildCard(x.c, zone)).join('')
+      : '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nenhuma campanha concluída</div></div>';
+  } else {
+    html = pending.map(x => buildCard(x.c, zone)).join('');
+    if (doneItems.length) {
+      html += `<button class="done-toggle" onclick="toggleDoneSection()">✓ Concluídas (${doneItems.length}) ${_showDone ? '▲' : '▼'}</button>`;
+      if (_showDone) html += doneItems.map(x => buildCard(x.c, zone)).join('');
+    }
+    if (!items.length) html = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nenhuma campanha encontrada</div></div>';
   }
+  list.innerHTML = html;
+}
 
-  list.innerHTML = filtered.map(c => {
-    const id = campaignId(c);
-    const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-    const isDone = p.r >= c.r && p.m >= c.m && p.ip >= c.ip && (c.r + c.m + c.ip > 0);
+function buildCard(c, zone) {
+  const id = campaignId(c);
+  const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
+  const zoneMode = zone === 'r' || zone === 'm' || zone === 'ip';
+  const isDone = isDoneFor(c, zone) === true;
+  const want = z => !zoneMode || zone === z;
 
-    const counters = [];
-    if (c.r > 0) counters.push(buildCounter(id, 'r', p.r, c.r, 'RUA'));
-    if (c.m > 0) counters.push(buildCounter(id, 'm', p.m, c.m, 'MT'));
-    if (c.ip > 0) counters.push(buildCounter(id, 'ip', p.ip, c.ip, 'IP'));
+  const counters = [];
+  if (c.r > 0 && want('r'))  counters.push(buildCounter(id, 'r', p.r, c.r, 'RUA'));
+  if (c.m > 0 && want('m'))  counters.push(buildCounter(id, 'm', p.m, c.m, 'METRO'));
+  if (c.ip > 0 && want('ip')) counters.push(buildCounter(id, 'ip', p.ip, c.ip, 'IP'));
 
-    // Botões Locais / Editar
-    const locHtml = `<div style="padding:0 16px 8px 49px; display:flex; gap:8px; flex-wrap:wrap;">` +
-      (isMupi(c) ? `<button class="loc-btn" onclick="openStations('${id}')">🚉 Locais</button>` : '') +
-      `<button class="loc-btn" style="background:var(--surface2); color:var(--text2);" onclick="openEdit('${id}')">✏️ Editar</button></div>`;
+  const rem = zoneMode ? zoneRemaining(c, zone) : 0;
+  const missBadge = zoneMode
+    ? `<div class="card-missing ${rem === 0 ? 'ok' : ''}" id="miss_${id}">${rem > 0 ? 'faltam ' + rem : '✓'}</div>` : '';
+  const checkHtml = zoneMode
+    ? `<div class="card-check"><span class="card-check-icon">✓</span></div>`
+    : `<div class="card-check" onclick="toggleDone(event,'${id}',${c.r},${c.m},${c.ip})"><span class="card-check-icon">✓</span></div>`;
 
-    return `
+  // Botões Locais / Editar
+  const locHtml = `<div style="padding:0 16px 8px 49px; display:flex; gap:8px; flex-wrap:wrap;">` +
+    (isMupi(c) ? `<button class="loc-btn" onclick="openStations('${id}')">🚉 Locais</button>` : '') +
+    `<button class="loc-btn" style="background:var(--surface2); color:var(--text2);" onclick="openEdit('${id}')">✏️ Editar</button></div>`;
+
+  return `
       <div class="card ${isDone ? 'done' : ''}" id="card_${id}">
-        <div class="card-header" onclick="toggleCard('${id}', ${c.r}, ${c.m}, ${c.ip})">
-          <div class="card-check" onclick="toggleDone(event,'${id}',${c.r},${c.m},${c.ip})">
-            <span class="card-check-icon">✓</span>
-          </div>
+        <div class="card-header">
+          ${checkHtml}
           <div class="card-info">
-            <div class="card-name">${c.campanha || '—'}</div>
-            <div class="card-meta">
-              <span class="tag">${c.venda}</span>
-              <span class="tag">${suporteLabel(c)}</span>
-            </div>
+            <div class="card-name">${escHtml(c.campanha || '—')}</div>
+            <div class="card-sub">${escHtml(c.venda)} · ${escHtml(suporteLabel(c))}</div>
           </div>
+          ${missBadge}
         </div>
+        ${c.notas ? `<div class="card-note-hl">📌 ${escHtml(c.notas)}</div>` : ''}
         ${counters.length ? `<div class="card-photos">${counters.join('')}</div>` : ''}
-        ${c.rede ? `<div class="card-notes" style="color:var(--muted)">📍 ${c.rede}</div>` : ''}
-        ${c.notas ? `<div class="card-notes">📌 ${c.notas}</div>` : ''}
+        ${c.rede ? `<div class="card-rede">📍 ${escHtml(c.rede)}</div>` : ''}
         ${locHtml}
         <div style="padding:0 16px 10px 49px;">
           <button onclick="deleteCampaign(event,'${id}')" style="font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; padding:0; font-weight:500;">🗑 Apagar campanha</button>
         </div>
       </div>
     `;
-  }).join('');
 }
 
 function buildCounter(id, type, current, target, label) {
   const isDone = current >= target;
   return `
     <div class="photo-counter">
-      <span class="photo-type">${label}</span>
+      <span class="photo-type ${type}">${label}</span>
       <div class="counter-controls">
         <button class="counter-btn" onclick="changeCount(event,'${id}','${type}',-1)">−</button>
         <div class="counter-val ${isDone ? 'done' : ''}" id="cv_${id}_${type}">${current}</div>
@@ -1263,36 +1344,34 @@ function changeCount(e, id, type, delta) {
   e.stopPropagation();
   if (!state.progress[id]) state.progress[id] = { r: 0, m: 0, ip: 0 };
   state.progress[id][type] = Math.max(0, (state.progress[id][type] || 0) + delta);
+  const campaign = findActiveCampaign(id) || findCampaign(id);
 
   // Registar timestamp quando se incrementa (não decrementa)
-  if (delta > 0) {
-    const campaign = findCampaign(id);
-    if (campaign) {
-      if (!state.timestamps) state.timestamps = [];
-      state.timestamps.push({
-        ts: new Date().toISOString(),
-        campanha: campaign.campanha,
-        suporte: campaign.suporte,
-        subtype: campaign.subtype || '',
-        type // 'r', 'm' ou 'ip'
-      });
-    }
+  if (delta > 0 && campaign) {
+    if (!state.timestamps) state.timestamps = [];
+    state.timestamps.push({
+      ts: new Date().toISOString(),
+      campanha: campaign.campanha,
+      suporte: campaign.suporte,
+      subtype: campaign.subtype || '',
+      type // 'r', 'm' ou 'ip'
+    });
   }
   saveState();
 
   // Update counter display
   const valEl = document.getElementById(`cv_${id}_${type}`);
   if (valEl) {
-    const campaign = findCampaign(id);
     const target = campaign ? campaign[type] : 99;
     const current = state.progress[id][type];
     valEl.textContent = current;
     valEl.classList.toggle('done', current >= target);
   }
 
-  // Update card done state
+  // Update card done state, progress and zone totals
   updateCardDone(id);
   updateProgress();
+  renderZoneBar();
   saveState();
 }
 
@@ -1337,18 +1416,18 @@ function deleteCampaign(e, id) {
 }
 
 function updateCardDone(id) {
-  const campaign = findCampaign(id);
+  const campaign = findActiveCampaign(id) || findCampaign(id);
   if (!campaign) return;
-  const p = state.progress[id] || { r: 0, m: 0, ip: 0 };
-  const isDone = p.r >= campaign.r && p.m >= campaign.m && p.ip >= campaign.ip &&
-                 (campaign.r + campaign.m + campaign.ip > 0);
+  const zone = state.activeZone;
+  const isDone = isDoneFor(campaign, zone) === true;
   const card = document.getElementById(`card_${id}`);
   if (card) {
     card.classList.toggle('done', isDone);
-    const check = card.querySelector('.card-check');
-    if (check) {
-      check.style.background = isDone ? 'var(--accent)' : '';
-      check.style.borderColor = isDone ? 'var(--accent)' : '';
+    const mb = document.getElementById(`miss_${id}`);
+    if (mb) {
+      const rem = zoneRemaining(campaign, zone);
+      mb.textContent = rem > 0 ? `faltam ${rem}` : '✓';
+      mb.classList.toggle('ok', rem === 0);
     }
   }
 }
@@ -1557,7 +1636,7 @@ function toggleArchiveWeek(w) {
 
 function clearAllData() {
   if (!confirm('Apagar todos os dados? Esta ação não pode ser revertida.')) return;
-  state = { weeks: {}, progress: {}, activeWeek: null, activeStatusFilter: 'all', activeTypeFilter: 'all', currentTab: 'home' };
+  state = { weeks: {}, progress: {}, activeWeek: null, activeStatusFilter: 'pending', activeTypeFilter: 'all', activeZone: 'all', uiv: 2, currentTab: 'home' };
   ensureState();
   saveState();
   renderAll();
@@ -1586,6 +1665,22 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Quantos do outro tipo (digitais/analógicos) já existem na mesma semana — e avisa se estão noutra semana
+function importWeekNote(weekName, thisKind) {
+  const otherAnalog = thisKind === 'digital';
+  const isOther = c => (c.subtype === 'analog') === otherAnalog;
+  const here = ((state.weeks[weekName] || {}).campaigns || []).filter(isOther).length;
+  const label = otherAnalog ? 'Analógicos' : 'Digitais';
+  let html = `<div class="stat-row"><span class="stat-label">${label} já carregados em ${weekName}</span><span class="stat-value ${here ? 'green' : 'red'}">${here}</span></div>`;
+  if (!here) {
+    const elsewhere = Object.keys(state.weeks).filter(w => w !== weekName && (state.weeks[w].campaigns || []).some(isOther));
+    if (elsewhere.length) {
+      html += `<div class="stat-row"><span class="stat-label" style="color:var(--orange); line-height:1.4;">Há ${label.toLowerCase()} noutra semana (${elsewhere.join(', ')}). Para ficarem juntos, importa com o mesmo número de semana.</span></div>`;
+    }
+  }
+  return html;
 }
 
 // ── ANALOG IMPORT ─────────────────────────────────────────────
@@ -1683,6 +1778,7 @@ function processAnalogRows(rows, weekName) {
     ...campaigns
   ];
   state.activeWeek = weekName;
+  state.activeType = 'analog'; state.activeTypeFilter = 'all';
   applyLocationAdjustments(weekName);
   saveState();
 
@@ -1705,6 +1801,7 @@ function processAnalogRows(rows, weekName) {
       <span class="stat-label">Ignoradas (sem campanha/venda)</span>
       <span class="stat-value red">${skipped}</span>
     </div>
+    ${importWeekNote(weekName, 'analog')}
   `;
 
   renderAll();
@@ -2400,60 +2497,6 @@ function openStations(id) {
   }
   document.getElementById('stationsBody').innerHTML = html;
   openSheet('stationsSheet');
-}
-
-// ══════════════════════════════════════════════════════════════
-// POP-UP "O QUE FALTA" (por zona, só consulta)
-// ══════════════════════════════════════════════════════════════
-var _missZone = 'r', _missType = 'all';
-
-function openMissingSheet() { renderMissing(); openSheet('missingSheet'); }
-function setMissZone(z) { _missZone = z; renderMissing(); }
-function setMissType(t) { _missType = t; renderMissing(); }
-
-function renderMissing() {
-  const isAnalog = state.activeType === 'analog';
-  const types = isAnalog ? AN_TYPES : DIG_TYPES;
-  if (_missType !== 'all' && !types.some(t => t[0] === _missType)) _missType = 'all';
-  const zones = [['r', 'Rua', ''], ['m', 'Metro', 'metro'], ['ip', 'IP', 'ip']];
-  const zoneLabel = zones.find(z => z[0] === _missZone)[1];
-
-  const w = state.weeks[state.activeWeek];
-  const camps = w ? w.campaigns : [];
-  const rows = [];
-  let total = 0;
-  camps.forEach(c => {
-    if ((c.subtype === 'analog') !== isAnalog) return;
-    if (!matchesTypeFilter(c, _missType)) return;
-    const p = state.progress[campaignId(c)] || { r: 0, m: 0, ip: 0 };
-    const falta = Math.max(0, (c[_missZone] || 0) - (p[_missZone] || 0));
-    if (falta > 0) { rows.push({ c, falta }); total += falta; }
-  });
-  rows.sort((a, b) => b.falta - a.falta || (a.c.campanha || '').localeCompare(b.c.campanha || '', 'pt'));
-
-  const zoneChips = zones.map(z =>
-    `<button class="chip ${z[2]} ${_missZone === z[0] ? 'active' : ''}" onclick="setMissZone('${z[0]}')">${z[1]}</button>`).join('');
-  const typeChips = [['all', 'Todos']].concat(types).map(t =>
-    `<button class="chip small ${_missType === t[0] ? 'active' : ''}" onclick="setMissType('${t[0]}')">${t[1]}</button>`).join('');
-
-  const list = rows.length
-    ? rows.map(({ c, falta }) => `
-        <div class="miss-row">
-          <div class="miss-info">
-            <div class="miss-name">${escHtml(c.campanha || '—')}</div>
-            <div class="miss-meta">${escHtml(suporteLabel(c))} · ${escHtml(c.venda)}</div>
-          </div>
-          <div class="miss-count">faltam ${falta}</div>
-        </div>`).join('')
-    : `<div style="padding:22px 0; text-align:center; font-size:13px; color:var(--muted);">Nada em falta em ${zoneLabel} ✓</div>`;
-
-  document.getElementById('missingTitle').textContent =
-    `O que falta${state.activeWeek ? ' — ' + state.activeWeek : ''} · ${isAnalog ? 'Analógicos' : 'Digitais'}`;
-  document.getElementById('missingBody').innerHTML = `
-    <div class="chip-row">${zoneChips}</div>
-    <div class="chip-row">${typeChips}</div>
-    <div class="miss-summary">${total} foto${total === 1 ? '' : 's'} de ${zoneLabel} em falta · ${rows.length} campanha${rows.length === 1 ? '' : 's'}</div>
-    ${list}`;
 }
 
 // ══════════════════════════════════════════════════════════════
