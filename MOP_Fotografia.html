@@ -238,6 +238,10 @@
   .chip.zone.active { color:#fff; }
   .zone-note { font-size:12px; color:var(--muted); background:var(--surface2); border-radius:var(--radius-sm); padding:9px 12px; margin-bottom:10px; line-height:1.5; }
   .zone-note button { background:none; border:none; color:var(--accent); font-size:12px; font-weight:600; cursor:pointer; padding:0; margin-left:6px; }
+  .csv-preview { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:11px; background:var(--surface2); border-radius:8px; padding:10px; overflow-x:auto; white-space:pre; max-height:190px; overflow-y:auto; color:var(--text2); margin-top:10px; }
+  .export-warn { font-size:12px; color:var(--orange); background:var(--orange-light); border-radius:var(--radius-sm); padding:9px 12px; margin-top:10px; line-height:1.5; }
+  .alias-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .alias-hint { font-size:11px; color:var(--muted); margin-top:6px; }
   .done-toggle {
     width:100%; margin:6px 0 10px; padding:12px; border:1px dashed var(--border);
     background:transparent; border-radius:var(--radius-sm); color:var(--muted);
@@ -508,7 +512,7 @@
 <div class="view" id="view-map">
   <div id="mapEmpty" class="empty">
     <div class="empty-icon">🗺️</div>
-    <div class="empty-text">Importa localizações (Rua / Metro / IP) para ver o mapa</div>
+    <div class="empty-text" id="mapEmptyText">Importa localizações (Rua / Metro / IP) para ver o mapa</div>
   </div>
   <div id="mapContent" style="display:none">
     <div style="font-size:12px; color:var(--muted); margin-bottom:10px; display:flex; gap:14px; align-items:center;">
@@ -610,7 +614,8 @@
 
   <div class="upload-success" id="uploadSuccess"></div>
   <div class="import-stats" id="importStats"></div>
-  <button class="btn btn-ghost" style="width:100%; margin-bottom:16px;" onclick="openLinkSheet()">🔗 Ligar campanhas aos ficheiros de localizações</button>
+  <button class="btn btn-ghost" style="width:100%; margin-bottom:10px;" onclick="openLinkSheet()">🔗 Ligar campanhas aos ficheiros de localizações</button>
+  <button class="btn btn-ghost" style="width:100%; margin-bottom:16px;" onclick="openExportSheet()">📤 Exportar para reconhecimento</button>
 
   <div style="margin-bottom: 16px;">
     <div style="font-size:13px; color:var(--muted); margin-bottom:10px; font-weight:500;">SEMANAS CARREGADAS</div>
@@ -694,6 +699,13 @@
   </div>
 </div>
 
+<div class="sheet-overlay" id="exportSheet" onclick="if(event.target===this) closeSheet('exportSheet')">
+  <div class="sheet">
+    <div class="sheet-head"><div class="sheet-title">Exportar para reconhecimento</div><button class="sheet-close" onclick="closeSheet('exportSheet')">✕</button></div>
+    <div class="sheet-body" id="exportBody"></div>
+  </div>
+</div>
+
 <div class="sheet-overlay" id="editSheet" onclick="if(event.target===this) closeSheet('editSheet')">
   <div class="sheet">
     <div class="sheet-head"><div class="sheet-title">Editar campanha</div><button class="sheet-close" onclick="closeSheet('editSheet')">✕</button></div>
@@ -747,6 +759,7 @@ var state = {
   locIgnore: {},    // { chaveCampanha: true } — campanhas a não ajustar
   adjOff: {},       // { campaignId: true } — ajustes desfeitos pelo utilizador
   locFiles: {},     // { semana: { rua: true, metroip: true } } — ficheiros carregados
+  aliasNames: {},   // { chaveCampanha: ['Outro nome', ...] } — "outros nomes" para o reconhecimento
   edits: {},        // { 'S40|campaignId': { campanha?, notas?, q?: {r,m,ip} } } — edições manuais
   currentTab: 'home',
   timestamps: []  // [{ ts, campanha, suporte, type }] — registo de marcações
@@ -764,7 +777,7 @@ function loadState() {
 }
 
 function ensureState() {
-  ['weeks', 'progress', 'mapData', 'edits', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
+  ['weeks', 'progress', 'mapData', 'edits', 'aliasNames', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
     if (!state[k] || typeof state[k] !== 'object') state[k] = {};
   });
   if (!state.activeStatusFilter) state.activeStatusFilter = 'pending';
@@ -887,6 +900,8 @@ function processRows(rows, weekName) {
     const colI = cell(row, cols.campanha);   // CAMPANHA
     const colJ = cell(row, cols.loc);        // Lisboa/Nacional/Porto
     const colK = cell(row, cols.notes);      // notas/filtros
+    const colAnunc = cell(row, cols.anunciante); // anunciante (opcional)
+    const colMarca = cell(row, cols.marca);      // marca (opcional)
 
     // Normalizar V, → V. (vírgula em vez de ponto)
     if (/^V,/i.test(colA)) colA = 'V.' + colA.slice(2);
@@ -922,7 +937,7 @@ function processRows(rows, weekName) {
     const notas = (colK && !colK.toUpperCase().includes('CONTINUA') &&
                    !colK.toUpperCase().includes('BRANDSTORE')) ? colK : '';
 
-    campaigns.push({ venda: colA, campanha: colI, suporte: colG, rede: colD, subtype, tipo, notas, r, m, ip });
+    campaigns.push({ venda: colA, campanha: colI, anunciante: colAnunc, marca: colMarca, suporte: colG, rede: colD, subtype, tipo, notas, r, m, ip });
     imported++;
   }
 
@@ -1767,6 +1782,7 @@ function processAnalogRows(rows, weekName) {
     campaigns.push({
       venda, campanha,
       suporte: formato.split('\n')[0].split('/')[0].trim(),
+      formato1: formato.split('\n')[0].trim(), // formato completo (ex.: "Mupis 4/0") — usado no CSV de reconhecimento
       subtype: 'analog',
       notas: '',
       base: { r, m, ip },
@@ -1827,6 +1843,7 @@ function exportProgress() {
     activeType: state.activeType,
     mapData: state.mapData || {},
     edits: state.edits || {},
+    aliasNames: state.aliasNames || {},
     locAliases: state.locAliases || {},
     locIgnore: state.locIgnore || {},
     adjOff: state.adjOff || {},
@@ -1858,6 +1875,7 @@ function importProgress(file) {
       if (data.activeWeek) state.activeWeek = data.activeWeek;
       if (data.activeType) state.activeType = data.activeType;
       if (data.mapData) state.mapData = { ...(state.mapData || {}), ...data.mapData };
+      if (data.aliasNames) state.aliasNames = { ...(state.aliasNames || {}), ...data.aliasNames };
       if (data.edits) state.edits = { ...(state.edits || {}), ...data.edits };
       if (data.locAliases) state.locAliases = { ...(state.locAliases || {}), ...data.locAliases };
       if (data.locIgnore) state.locIgnore = { ...(state.locIgnore || {}), ...data.locIgnore };
@@ -2013,7 +2031,9 @@ function detectDigitalColumns(rows) {
     ref:      find(h => h.includes('REFERENCIA')),
     rede:     find(h => h.startsWith('REDE')),
     formato:  find(h => h === 'FORMATO'),
-    campanha: find(h => h === 'CAMPANHA')
+    campanha: find(h => h === 'CAMPANHA'),
+    anunciante: find(h => h === 'ANUNCIANTE'), // opcional
+    marca: find(h => h === 'MARCA')            // opcional (o script usa-a como nome, se existir)
   };
   const missing = [['ref', 'Nº Referência'], ['rede', 'Rede/Isolado'], ['formato', 'Formato'], ['campanha', 'Campanha']]
     .filter(([k]) => cols[k] < 0).map(([, n]) => n);
@@ -2386,6 +2406,10 @@ function openEdit(id) {
   const c = findActiveCampaign(id);
   if (!c) { showToast('Campanha não encontrada'); return; }
   window._editId = id;
+  // Sugestões de outros nomes (toque para acrescentar)
+  _aliasChips = aliasSuggestions(c);
+  const aliasChipsHtml = _aliasChips.length
+    ? `<div class="alias-chips">${_aliasChips.map((n, i) => `<button class="chip small" onclick="addAliasChip(${i})">+ ${escHtml(n)}</button>`).join('')}</div>` : '';
   // Mupis analógicos: ajuste automático pelos ficheiros de localizações (desfazer / reaplicar)
   let adjBlock = '';
   if (isMupi(c)) {
@@ -2401,6 +2425,10 @@ function openEdit(id) {
     <input class="edit-input" id="editNome" value="${escHtml(c.campanha)}">
     <label class="edit-label">Observações</label>
     <textarea class="edit-input" id="editNotas" rows="3">${escHtml(c.notas || '')}</textarea>
+    <label class="edit-label">Outros nomes (para reconhecimento)</label>
+    <input class="edit-input" id="editAliases" placeholder="ex.: Securitas; Verisure" value="${escHtml(((state.aliasNames || {})[aliasKey(c)] || []).join('; '))}">
+    ${aliasChipsHtml}
+    <div class="alias-hint">Separados por ponto e vírgula. Seguem no CSV de reconhecimento.</div>
     <label class="edit-label">Fotos a fotografar</label>
     <div class="edit-qty">
       <div><label>Rua</label><input class="edit-input" id="editR" type="number" inputmode="numeric" min="0" max="99" value="${c.r || 0}"></div>
@@ -2434,6 +2462,7 @@ function saveEdit() {
 
   // 1. voltar ao automático para saber o que é "original"
   const key = editKey(week, c);
+  const aliasKeyBefore = aliasKey(c);
   delete state.edits[key];
   resetCampaignToAuto(c);
   if (c.subtype === 'analog') applyLocationAdjustments(week); else applyDigitalRules(week);
@@ -2449,10 +2478,25 @@ function saveEdit() {
   if (Object.keys(e).length) state.edits[key] = e;
 
   reapplyEdits(week);
+
+  // Outros nomes (por campanha, valem para todas as semanas)
+  state.aliasNames = state.aliasNames || {};
+  const aliasKeyAfter = aliasKey(c);
+  if (aliasKeyBefore !== aliasKeyAfter && state.aliasNames[aliasKeyBefore]) {
+    state.aliasNames[aliasKeyAfter] = [...(state.aliasNames[aliasKeyAfter] || []), ...state.aliasNames[aliasKeyBefore]];
+    delete state.aliasNames[aliasKeyBefore];
+  }
+  const newAliases = parseAliases(document.getElementById('editAliases').value);
+  const oldAliases = state.aliasNames[aliasKeyAfter] || [];
+  const aliasChanged = JSON.stringify(newAliases) !== JSON.stringify(oldAliases);
+  if (aliasChanged) {
+    if (newAliases.length) state.aliasNames[aliasKeyAfter] = newAliases; else delete state.aliasNames[aliasKeyAfter];
+  }
+
   saveState();
   closeSheet('editSheet');
   renderAll();
-  showToast(Object.keys(e).length ? '✓ Campanha editada' : 'Sem alterações');
+  showToast((Object.keys(e).length || aliasChanged) ? '✓ Campanha editada' : 'Sem alterações');
 }
 
 function resetEdit() {
@@ -2466,6 +2510,173 @@ function resetEdit() {
   closeSheet('editSheet');
   renderAll();
   showToast('Valores automáticos repostos');
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPORTAR PARA RECONHECIMENTO (CSV para o mop_tag.py / Lightroom)
+// Mesmo formato do comando "lista" do mop_tag.py:
+//   nome, aliases, anunciante, origem, suportes_conhecidos
+// (UTF-8 com BOM, linhas CRLF, itens separados por "; ")
+// ══════════════════════════════════════════════════════════════
+var RECOG_HEADER = ['nome', 'aliases', 'anunciante', 'origem', 'suportes_conhecidos'];
+var RECOG_DELIM = ',';
+var RECOG_LIST_SEP = '; ';
+var RECOG_EOL = '\r\n';
+
+// Igual ao limpar_nome() do mop_tag.py
+function limparNome(s) {
+  s = String(s == null ? '' : s).replace(/\n/g, ' ');
+  s = s.replace(/\b\d{1,2}\s?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s?['’]?\s?\d{2}\b/gi, ''); // 21out'26
+  s = s.replace(/\b\d{1,2}-\d{1,2}-\d{4}\b/g, '');                                                       // 24-10-2026
+  s = s.replace(/\b\d+\s*TEMAS?\b/gi, '');                                                                // 5 TEMAS
+  s = s.replace(/\s*\|\s*/g, ' | ');
+  s = s.replace(/\s+/g, ' ');
+  return s.trim().replace(/^[ \-|.]+|[ \-|.]+$/g, '');
+}
+
+function nameEdited(c) { return !!c.edited && c.campanhaOrig != null && c.campanha !== c.campanhaOrig; }
+// nome do ficheiro, limpo (digitais: MARCA se existir, senão CAMPANHA — como no script)
+function baseName(c) {
+  const n = limparNome(c.marca && String(c.marca).trim() ? c.marca : origName(c));
+  return n || String(origName(c) || '').trim();
+}
+function exportName(c) { return nameEdited(c) ? String(c.campanha).trim() : baseName(c); }
+function campaignGroupKey(c) { return normKey(exportName(c)) || exportName(c).toLowerCase(); }
+function aliasKey(c) { return campaignGroupKey(c); }
+
+function parseAliases(str) {
+  const out = [], seen = new Set();
+  String(str || '').split(/[;\n]+/).map(x => x.trim()).filter(Boolean).forEach(x => {
+    const k = normKey(x);
+    if (k && !seen.has(k)) { seen.add(k); out.push(x); }
+  });
+  return out;
+}
+
+// "COFIDIS PORTUGAL,S.A." → "Cofidis Portugal"
+function brandFromAdvertiser(a) {
+  let t = String(a || '').trim().replace(/[,\s]+(S\.?\s?A\.?|LDA\.?|LIMITADA)\s*$/i, '').trim();
+  if (t && t === t.toUpperCase()) t = t.toLowerCase().replace(/(^|[\s\-–|(])([a-zà-ÿ])/g, (m, p, ch) => p + ch.toUpperCase());
+  return t;
+}
+function aliasSuggestions(c) {
+  const out = [];
+  const have = new Set([normKey(exportName(c)), ...(((state.aliasNames || {})[aliasKey(c)]) || []).map(normKey)]);
+  const add = n => { const k = normKey(n); if (k && !have.has(k)) { have.add(k); out.push(n); } };
+  if (c.anunciante) {
+    const b = brandFromAdvertiser(c.anunciante), bk = normKey(b), nk = normKey(exportName(c));
+    if (b && !bk.includes(nk) && !nk.includes(bk)) add(b);
+  }
+  if (isMupi(c) && state.activeWeek) linkedNamesFor(c, state.activeWeek).forEach(add);
+  return out.slice(0, 6);
+}
+var _aliasChips = [];
+function addAliasChip(i) {
+  const el = document.getElementById('editAliases');
+  const list = parseAliases(el.value);
+  const n = _aliasChips[i];
+  if (n && !list.some(x => normKey(x) === normKey(n))) list.push(n);
+  el.value = list.join('; ');
+}
+
+// Uma linha por campanha (digitais + analógicos juntos), nas semanas escolhidas
+function buildRecognitionRows(weeks) {
+  const groups = new Map();
+  weeks.forEach(w => ((state.weeks[w] || {}).campaigns || []).forEach(c => {
+    if (!exportName(c)) return;
+    const k = campaignGroupKey(c);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(c);
+  }));
+  const uniq = arr => [...new Set(arr)].sort();
+  const rows = [];
+  groups.forEach((members, k) => {
+    // nome: o editado (se houver), senão o primeiro dos digitais (como o script), senão o primeiro
+    const base = members.find(nameEdited) || members.find(c => c.subtype !== 'analog') || members[0];
+    const nome = exportName(base);
+    // aliases: os guardados + o nome original do ficheiro, se o renomeaste
+    const al = [...(((state.aliasNames || {})[k]) || [])];
+    members.filter(nameEdited).forEach(c => al.push(baseName(c)));
+    members.forEach(c => { const n = exportName(c); if (n.toLowerCase() !== nome.toLowerCase()) al.push(n); }); // variantes juntas na mesma linha
+    const aliases = parseAliases(al.join(';')).filter(a => a.toLowerCase() !== nome.toLowerCase());
+    const anunc = uniq(members.map(c => String(c.anunciante || '').trim()).filter(a => a && a !== 'nan'));
+    const orig = uniq(members.map(c => c.subtype === 'analog' ? 'analógico' : 'digital'));
+    const sup = uniq(members.map(c => String(c.subtype === 'analog' ? (c.formato1 || c.suporte) : c.suporte).trim()).filter(x => x && x !== 'nan'));
+    rows.push({
+      nome, aliases: aliases.join(RECOG_LIST_SEP), anunciante: anunc.join(RECOG_LIST_SEP),
+      origem: orig.join(RECOG_LIST_SEP), suportes_conhecidos: sup.join(RECOG_LIST_SEP)
+    });
+  });
+  rows.sort((a, b) => { const x = a.nome.toLowerCase(), y = b.nome.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0; });
+  return rows;
+}
+
+function csvCell(v) {
+  const t = String(v == null ? '' : v);
+  return /["\r\n]/.test(t) || t.includes(RECOG_DELIM) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+function recognitionCSV(weeks) {
+  const lines = [RECOG_HEADER.join(RECOG_DELIM)];
+  buildRecognitionRows(weeks).forEach(r => lines.push(RECOG_HEADER.map(h => csvCell(r[h])).join(RECOG_DELIM)));
+  return lines.join(RECOG_EOL) + RECOG_EOL;
+}
+function recognitionFileName(weeks) {
+  const nums = weeks.map(w => parseInt(String(w).slice(1)) || 0).filter(Boolean).sort((a, b) => a - b);
+  return `campanhas_sem${nums.join('-') || 'x'}.csv`;
+}
+
+var _exportWeeks = new Set(), _exportWeekList = [];
+function openExportSheet() {
+  _exportWeeks = new Set(state.activeWeek && state.weeks[state.activeWeek] ? [state.activeWeek] : []);
+  renderExportSheet();
+  openSheet('exportSheet');
+}
+function toggleExportWeek(i) {
+  const w = _exportWeekList[i];
+  if (_exportWeeks.has(w)) _exportWeeks.delete(w); else _exportWeeks.add(w);
+  renderExportSheet();
+}
+function renderExportSheet() {
+  const body = document.getElementById('exportBody');
+  const weeks = Object.keys(state.weeks || {}).sort((a, b) => (parseInt(b.slice(1)) || 0) - (parseInt(a.slice(1)) || 0));
+  _exportWeekList = weeks;
+  if (!weeks.length) {
+    body.innerHTML = '<div style="padding:18px 0; font-size:13px; color:var(--muted);">Ainda não há semanas carregadas.</div>';
+    return;
+  }
+  const chosen = weeks.filter(w => _exportWeeks.has(w));
+  const rows = buildRecognitionRows(chosen);
+  const camps = chosen.flatMap(w => state.weeks[w].campaigns || []);
+  const noAdvField = camps.filter(c => c.subtype !== 'analog' && c.anunciante === undefined).length;
+  const noFullFmt = camps.filter(c => c.subtype === 'analog' && c.formato1 === undefined).length;
+  const noAdv = rows.filter(r => !r.anunciante).length;
+  const csv = recognitionCSV(chosen);
+  let html = `<div class="link-section" style="margin-top:0">Semanas a incluir</div>` + weeks.map((w, i) => {
+    const cs = state.weeks[w].campaigns || [];
+    const nA = cs.filter(c => c.subtype === 'analog').length;
+    return `<label class="link-opt"><input type="checkbox" ${_exportWeeks.has(w) ? 'checked' : ''} onchange="toggleExportWeek(${i})"> <span>${w} · ${cs.length - nA} digitais · ${nA} analógicos</span></label>`;
+  }).join('');
+  html += `<div class="miss-summary" style="margin-top:12px">${rows.length} campanha${rows.length === 1 ? '' : 's'} no CSV</div>`;
+  if (noAdvField) html += `<div class="export-warn">${noAdvField} campanhas digitais foram carregadas antes de a app guardar o anunciante. Reimporta os digitais dessa semana para o preencher.</div>`;
+  if (noFullFmt) html += `<div class="export-warn">${noFullFmt} campanhas analógicas foram carregadas antes de a app guardar o formato completo (ex.: "Mupis 4/0"). Reimporta os analógicos dessa semana.</div>`;
+  if (!noAdvField && !noFullFmt && rows.length && noAdv) html += `<div class="export-warn">${noAdv} campanhas ficam sem anunciante (os analógicos não trazem esta coluna).</div>`;
+  if (rows.length) html += `<div class="csv-preview">${escHtml(csv.split(RECOG_EOL).slice(0, 8).join('\n'))}</div>`;
+  html += `<button class="btn btn-primary" style="width:100%; margin-top:14px" onclick="downloadRecognitionCSV()" ${rows.length ? '' : 'disabled'}>⬇️ Descarregar ${escHtml(recognitionFileName(chosen))}</button>`;
+  body.innerHTML = html;
+}
+function downloadRecognitionCSV() {
+  const chosen = Object.keys(state.weeks || {}).filter(w => _exportWeeks.has(w));
+  if (!chosen.length) { showToast('Escolhe pelo menos uma semana'); return; }
+  // BOM (\ufeff) → o script lê com utf-8-sig e o Excel abre os acentos bem
+  const blob = new Blob(['\ufeff' + recognitionCSV(chosen)], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = recognitionFileName(chosen);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  showToast('✓ ' + a.download);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2689,7 +2900,7 @@ function tipoLabelPt(tipo) {
   return 'Rua';
 }
 
-// Localizações (com coordenadas) de uma campanha — da semana ativa, ou todas se não houver
+// Localizações (com coordenadas) de uma campanha — só as da semana ativa
 function findMapPool(name) {
   if (!state.mapData) return [];
   let arr = state.mapData[name];
@@ -2697,14 +2908,27 @@ function findMapPool(name) {
     const key = Object.keys(state.mapData).find(k => k.trim().toLowerCase() === (name || '').trim().toLowerCase());
     arr = key ? state.mapData[key] : [];
   }
-  const wk = arr.filter(e => !e.week || e.week === state.activeWeek);
-  return (wk.length ? wk : arr).filter(hasCoords);
+  return arr.filter(e => e.week === state.activeWeek && hasCoords(e));
+}
+
+function mapIdleText(n) {
+  return `Semana ${state.activeWeek}: ${n} campanha${n === 1 ? '' : 's'} com localizações. Seleciona uma para a ver no mapa`;
 }
 
 function renderMapView() {
   const campanhas = state.mapData || {};
   const names = Object.keys(campanhas).filter(n => findMapPool(n).length > 0).sort();
   const hasData = names.length > 0;
+
+  // Mensagem quando não há localizações para a semana ativa
+  const weeksWith = [...new Set(Object.values(campanhas).flat().map(e => e.week).filter(Boolean))]
+    .sort((a, b) => (parseInt(a.slice(1)) || 0) - (parseInt(b.slice(1)) || 0));
+  const emptyEl = document.getElementById('mapEmptyText');
+  if (emptyEl) {
+    emptyEl.textContent = (!hasData && state.activeWeek && weeksWith.length)
+      ? `Sem localizações para ${state.activeWeek}. Há dados das semanas ${weeksWith.join(', ')}: escolhe uma dessas semanas em "Em Campo" ou importa os ficheiros de ${state.activeWeek}.`
+      : 'Importa localizações (Rua / Metro / IP) para ver o mapa';
+  }
 
   document.getElementById('mapEmpty').style.display = hasData ? 'none' : 'block';
   if (!hasData) {
@@ -2719,6 +2943,8 @@ function renderMapView() {
   sel.innerHTML = '<option value="">Seleciona uma campanha...</option>' +
     names.map(n => `<option value="${escHtml(n)}" ${n === current ? 'selected' : ''}>${escHtml(n)} (${findMapPool(n).length})</option>`).join('');
 
+  if (!sel.value) document.getElementById('mapStats').textContent = mapIdleText(names.length);
+
   // Map init and campaign display handled by switchTab after DOM is ready
 }
 
@@ -2727,7 +2953,7 @@ function filterMap() {
   const name = sel.value;
   if (!name) {
     clearMapMarkers();
-    document.getElementById('mapStats').textContent = 'Seleciona uma campanha para ver as localizações no mapa';
+    document.getElementById('mapStats').textContent = mapIdleText(Object.keys(state.mapData || {}).filter(n => findMapPool(n).length > 0).length);
     return;
   }
   showMapCampaign(name);
