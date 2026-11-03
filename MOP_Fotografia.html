@@ -245,6 +245,10 @@
   .seg { display:flex; background:var(--surface2); border-radius:10px; padding:3px; margin-bottom:12px; gap:3px; }
   .seg-btn { flex:1; padding:8px; border:none; border-radius:8px; background:transparent; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; }
   .seg-btn.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+  .seg2-btn { flex:1; padding:8px; border:none; border-radius:8px; background:transparent; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; }
+  .seg2-btn.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+  .wk-row { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--border-light); cursor:pointer; }
+  .wk-row input[type=checkbox] { width:20px; height:20px; flex-shrink:0; }
   .done-toggle {
     width:100%; margin:6px 0 10px; padding:12px; border:1px dashed var(--border);
     background:transparent; border-radius:var(--radius-sm); color:var(--muted);
@@ -598,12 +602,17 @@
       <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
       <div class="progress-text" id="progressText">0 / 0</div>
     </div>
+    <div style="text-align:right; margin-bottom:8px;"><button class="loc-btn" onclick="openNewCampSheet()">+ Nova campanha</button></div>
     <div id="cardList"></div>
   </div>
 </div>
 
 <!-- IMPORT -->
 <div class="view" id="view-import">
+  <button class="btn btn-primary" style="width:100%; padding:15px; font-size:15px; margin-bottom:6px;" onclick="openWeeklySheet()">📥 Carregar ficheiros da semana</button>
+  <div style="font-size:12px; color:var(--muted); text-align:center; margin-bottom:12px;">Escolhe todos os ficheiros de uma vez: a app reconhece cada um</div>
+  <button class="btn btn-ghost" style="width:100%; margin-bottom:18px;" onclick="openNewCampSheet()">➕ Criar campanha manualmente</button>
+  <div style="font-size:12px; color:var(--muted); margin-bottom:8px; font-weight:500;">OU CARREGAR UM A UM</div>
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px;">
     <div class="drop-zone" style="margin-bottom:0" onclick="document.getElementById('fileInput').click()">
       <div class="drop-icon">📱</div>
@@ -734,6 +743,21 @@
   <div class="sheet">
     <div class="sheet-head"><div class="sheet-title" id="facesTitle">Sem localização</div><button class="sheet-close" onclick="closeSheet('facesSheet')">✕</button></div>
     <div class="sheet-body" id="facesBody"></div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="weeklySheet" onclick="if(event.target===this) closeSheet('weeklySheet')">
+  <div class="sheet">
+    <div class="sheet-head"><div class="sheet-title">Carregar ficheiros da semana</div><button class="sheet-close" onclick="closeSheet('weeklySheet')">✕</button></div>
+    <input type="file" id="weeklyFilesInput" accept=".xlsx,.xls" multiple style="display:none" onchange="weeklyReadFiles(this.files)">
+    <div class="sheet-body" id="weeklyBody"></div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="newCampSheet" onclick="if(event.target===this) closeSheet('newCampSheet')">
+  <div class="sheet">
+    <div class="sheet-head"><div class="sheet-title">Nova campanha</div><button class="sheet-close" onclick="closeSheet('newCampSheet')">✕</button></div>
+    <div class="sheet-body" id="newCampBody"></div>
   </div>
 </div>
 
@@ -983,12 +1007,14 @@ function processRows(rows, weekName) {
   }
   state.weeks[weekName].campaigns = [
     ...state.weeks[weekName].campaigns.filter(c => c.subtype === 'analog'),
+    ...state.weeks[weekName].campaigns.filter(c => c.manual && c.subtype !== 'analog' && !campaigns.some(n => normKey(n.venda) === normKey(c.venda))),
     ...campaigns
   ];
   state.weeks[weekName].loaded = new Date().toLocaleDateString('pt');
   state.activeWeek = weekName;
   state.activeType = 'digital'; state.activeTypeFilter = 'all'; state.activeZone = 'all';
   applyDigitalRules(weekName);
+  _lastImport = { kind: 'digitais', imported, skipped };
   saveState();
 
   // Show stats
@@ -1791,30 +1817,7 @@ function processAnalogRows(rows, weekName) {
       venda = `SV${svCounter}`;
     }
 
-    // Calcular fotos por formato
-    const fUp = formato.toUpperCase();
-    let r = 0, m = 0, ip = 0;
-
-    if (fUp.includes('MUPI')) {
-      r = 2; m = 2; ip = 2;
-    } else if (fUp.includes('PPA')) {
-      r = 5;
-    } else if (fUp.includes('8X3')) {
-      r = 3;
-    } else if (fUp.includes('PARED')) {
-      m = 1;
-    } else if (fUp.includes('ATM')) {
-      r = 2;
-    } else if (fUp.replace(/\s/g,'').includes('4PLUS') || fUp.includes('4 PLUS') || fUp.includes('(4X1')) {
-      m = 3;
-    } else if (fUp.includes('ELÉT') || fUp.includes('ELET') || fUp.includes('RI AUTO') || fUp.includes('CARRIS') || fUp.includes('STCP')) {
-      r = 4;
-    } else if (fUp.includes('FLASH')) {
-      m = 3;
-    } else {
-      // Abrigos, Ativação, Canais, Colunas, Sancas, etc.
-      m = 1;
-    }
+    const { r, m, ip } = analogQuantities(formato);
 
     campaigns.push({
       venda, campanha,
@@ -1835,11 +1838,13 @@ function processAnalogRows(rows, weekName) {
   // Remover analógicos anteriores desta semana e adicionar os novos
   state.weeks[weekName].campaigns = [
     ...state.weeks[weekName].campaigns.filter(c => c.subtype !== 'analog'),
+    ...state.weeks[weekName].campaigns.filter(c => c.manual && c.subtype === 'analog' && !campaigns.some(n => normKey(n.venda) === normKey(c.venda))),
     ...campaigns
   ];
   state.activeWeek = weekName;
   state.activeType = 'analog'; state.activeTypeFilter = 'all'; state.activeZone = 'all';
   applyLocationAdjustments(weekName);
+  _lastImport = { kind: 'analogicos', imported, skipped };
   saveState();
 
   document.getElementById('uploadSuccess').style.display = 'block';
@@ -2237,6 +2242,7 @@ function pendingLinkCount(week) {
   return n;
 }
 function maybePromptLinking(week) {
+  if (_batchMode) return;
   const files = (state.locFiles || {})[week] || {};
   if (!(files.rua || files.metroip)) return;
   if (state.activeWeek !== week) return;
@@ -2265,7 +2271,7 @@ function handleMapFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-function processLocationFile(rows, fileName) {
+function processLocationFile(rows, fileName, forcedWeek) {
   // 1. Cabeçalho (procura a coluna de morada/estação)
   let hi = -1;
   for (let i = 0; i < Math.min(rows.length, 10); i++) {
@@ -2381,7 +2387,8 @@ function processLocationFile(rows, fileName) {
     if (iCon < 0) askLocationType(t => build(week, t));
     else build(week, null);
   };
-  if (weekNum == null) askWeek(w => withWeek(w));
+  if (forcedWeek) withWeek(forcedWeek);
+  else if (weekNum == null) askWeek(w => withWeek(w));
   else withWeek('S' + weekNum);
 }
 
@@ -3003,7 +3010,7 @@ function renderDigitalSheet() {
 // ── Mapa: modo Analógicos / Digitais ──
 function syncMapMode() {
   const mode = state.mapMode === 'digital' ? 'digital' : 'analog';
-  document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-mode') === mode));
+  document.querySelectorAll('#mapModeBar .seg-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-mode') === mode));
   const bar = document.getElementById('digitalMapBar');
   if (bar) bar.style.display = mode === 'digital' ? 'flex' : 'none';
 }
@@ -3113,6 +3120,465 @@ function openMissingFaces() {
   if (tomi.length) html += `<div class="link-section"${outras.length ? '' : ' style="margin-top:0"'}>Tomi (${tomi.length})</div><div style="font-size:12px; color:var(--muted); margin-bottom:6px;">Os Tomi não constam no master.</div>` + tomi.map(row).join('');
   document.getElementById('facesBody').innerHTML = html;
   openSheet('facesSheet');
+}
+
+// ══════════════════════════════════════════════════════════════
+// CARREGAR FICHEIROS DA SEMANA — reconhecimento automático pelo conteúdo
+// ══════════════════════════════════════════════════════════════
+var _batchMode = false;
+var _weekly = null;      // { stage: 'start'|'review'|'result', files: [], week: 'S45', result: null }
+var _lastImport = null;  // { kind, imported, skipped } da última importação
+var KIND_LABEL = { digitais: 'Digitais', analogicos: 'Analógicos', loc: 'Localizações', rede: 'Campanhas digitais (Rede)', master: 'Master dos mupis digitais' };
+var KIND_ORDER = ['master', 'digitais', 'analogicos', 'loc', 'rede'];
+
+// Data de uma célula (número de série do Excel, Date, "AAAA-MM-DD" ou "M/D/AAAA") → "AAAA-MM-DD"
+function toISODate(v) {
+  if (v instanceof Date && !isNaN(v)) return v.toISOString().slice(0, 10);
+  if (typeof v === 'number' && v > 20000 && v < 80000) {
+    return new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000).toISOString().slice(0, 10);
+  }
+  const s = String(v == null ? '' : v).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m ? `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}` : null;
+}
+
+// Que tipo de ficheiro é? (pelas colunas, não pelo nome)
+function detectFileKind(rows) {
+  const head = (rows || []).slice(0, 15);
+  const norm = r => (r || []).map(c => normTxt(c).replace(/\s+/g, ' ').trim());
+  if (head.some(r => String((r || [])[0] == null ? '' : r[0]).trim() === 'Sales Market')) return { kind: 'rede' };
+  for (const r of head) { const c = norm(r); if (c.includes('ID SUPORTE') && c.includes('LATITUDE') && c.includes('LONGITUDE')) return { kind: 'master' }; }
+  for (const r of head) {
+    const c = norm(r);
+    if (c.some(x => x.startsWith('ENDERECO')) && c.includes('GPS')) return { kind: 'loc', sub: locSubKind(rows) };
+  }
+  for (const r of head) { const c = norm(r); if (c.includes('FORMATO') && c.includes('CAMPANHA')) return { kind: 'digitais' }; }
+  for (const r of head) { const c = norm(r); if (c.includes('CAMPANHA') && c.includes('SEMANA') && c.some(x => x.startsWith('FORMATOS'))) return { kind: 'analogicos' }; }
+  return { kind: null };
+}
+
+// Localizações: Rua ou Metro/IP (pelo concedente)
+function locSubKind(rows) {
+  let hi = -1;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    if ((rows[i] || []).some(c => normTxt(c).trim().startsWith('ENDERECO'))) { hi = i; break; }
+  }
+  if (hi < 0) return 'rua';
+  const iCon = rows[hi].findIndex(c => normTxt(c).trim().startsWith('CONCEDENTE'));
+  if (iCon < 0) return 'rua';
+  let mi = 0, rua = 0;
+  rows.slice(hi + 1).forEach(r => {
+    const con = normTxt(r[iCon]);
+    if (!con.trim()) return;
+    if (con.includes('METRO') || /\bIP\b/.test(con)) mi++; else rua++;
+  });
+  return mi > rua ? 'metroip' : 'rua';
+}
+
+// Semana a que o ficheiro parece pertencer (número) ou null
+function inferFileWeek(kind, rows, fileName) {
+  if (kind === 'loc') {
+    let hi = -1;
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+      if ((rows[i] || []).some(c => normTxt(c).trim().startsWith('ENDERECO'))) { hi = i; break; }
+    }
+    const iPla = hi >= 0 ? rows[hi].findIndex(c => normTxt(c).trim().startsWith('NOME DA PLANILHA')) : -1;
+    if (iPla >= 0) for (const r of rows.slice(hi + 1)) { const m = String(r[iPla] || '').match(/SEM\s*(\d{1,2})/i); if (m) return parseInt(m[1]); }
+    const m = String(fileName || '').match(/sem\s*[_-]?(\d{1,2})/i);
+    return m ? parseInt(m[1]) : null;
+  }
+  if (kind === 'rede') return isoWeekOf(toISODate(parseRedeRows(rows).start));
+  if (kind === 'digitais') {
+    const cols = detectDigitalColumns(rows);
+    if (cols.error) return null;
+    const hdr = rows[cols.header].map(h => normTxt(h).replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim());
+    const iStart = hdr.indexOf('DATA INICIO');
+    if (iStart < 0) return null;
+    let max = null;
+    rows.slice(cols.header + 1).forEach(r => { const d = toISODate(r[iStart]); if (d && (!max || d > max)) max = d; });
+    return max ? isoWeekOf(max) : null;
+  }
+  return null;
+}
+
+// Semana proposta para o lote (a que reúne mais "votos" dos ficheiros)
+function suggestBatchWeek(files) {
+  const score = {};
+  const add = (w, n) => { if (w) score[w] = (score[w] || 0) + n; };
+  files.filter(f => f.kind === 'loc' && f.week).forEach(f => add(f.week, 3));
+  files.filter(f => f.kind === 'digitais' && f.week).forEach(f => add(f.week, 3));
+  const rw = files.filter(f => f.kind === 'rede' && f.week).map(f => f.week);
+  if (rw.length) add(Math.max(...rw), 2);
+  const best = Object.keys(score).map(Number).sort((a, b) => score[b] - score[a] || b - a)[0];
+  return best ? 'S' + best : (state.activeWeek || '');
+}
+
+// Lista de {name, rows} → ficheiros analisados + semana proposta
+function analyseWeeklyFiles(list) {
+  const files = list.map(it => {
+    const k = detectFileKind(it.rows);
+    return { name: it.name, rows: it.rows, kind: k.kind, sub: k.sub || '', week: k.kind ? inferFileWeek(k.kind, it.rows, it.name) : null, include: !!k.kind, note: '' };
+  });
+  const w = { stage: 'review', files, week: suggestBatchWeek(files), result: null };
+  weeklyApplyRules(w);
+  return w;
+}
+
+// Regras de seleção: localizações de outra semana ficam de fora; um só ficheiro de cada tipo
+function weeklyApplyRules(w) {
+  w = w || _weekly;
+  const W = parseInt(String(w.week).replace(/\D/g, '')) || null;
+  w.files.forEach(f => { f.note = ''; f.include = !!f.kind; });
+  w.files.filter(f => f.kind === 'loc' && f.week && W && f.week !== W).forEach(f => { f.include = false; f.note = `é da semana S${f.week}`; });
+  const groups = {};
+  w.files.filter(f => f.kind && f.kind !== 'rede').forEach(f => { const k = f.kind === 'loc' ? 'loc:' + f.sub : f.kind; (groups[k] = groups[k] || []).push(f); });
+  Object.values(groups).forEach(g => {
+    const cand = g.filter(f => f.include);
+    if (cand.length <= 1) return;
+    cand.sort((a, b) => ((b.week === W) - (a.week === W)) || ((b.week || 0) - (a.week || 0)));
+    cand.slice(1).forEach(f => { f.include = false; f.note = 'há outro ficheiro do mesmo tipo'; });
+  });
+}
+
+function openWeeklySheet() {
+  if (!_weekly || _weekly.stage === 'result') _weekly = { stage: 'start', files: [], week: '', result: null };
+  renderWeeklySheet();
+  openSheet('weeklySheet');
+}
+async function weeklyReadFiles(fileList) {
+  const files = [...(fileList || [])];
+  if (!files.length) return;
+  const list = [];
+  for (const f of files) {
+    let rows = null;
+    try { rows = await readFileRows(f); } catch (e) { console.error(e); }
+    list.push({ name: f.name, rows: rows || [] });
+  }
+  try { document.getElementById('weeklyFilesInput').value = ''; } catch (e) {}
+  _weekly = analyseWeeklyFiles(list);
+  renderWeeklySheet();
+}
+function weeklyDrop(e) {
+  e.preventDefault();
+  try { e.currentTarget.classList.remove('drag-over'); } catch (x) {}
+  weeklyReadFiles(e.dataTransfer && e.dataTransfer.files);
+}
+function weeklySetWeek(v) {
+  const n = parseInt(String(v).replace(/\D/g, ''));
+  _weekly.week = n ? 'S' + n : '';
+  weeklyApplyRules();
+  renderWeeklySheet();
+}
+function weeklyToggle(i) {
+  const f = _weekly.files[i];
+  if (!f || !f.kind) return;
+  f.include = !f.include;
+  f.note = '';
+  if (f.include && f.kind !== 'rede') {
+    _weekly.files.forEach(o => {
+      const same = o !== f && o.kind === f.kind && (f.kind !== 'loc' || o.sub === f.sub);
+      if (same && o.include) { o.include = false; o.note = 'há outro ficheiro do mesmo tipo'; }
+    });
+  }
+  renderWeeklySheet();
+}
+function weeklyToggleRede() {
+  const rede = _weekly.files.filter(f => f.kind === 'rede');
+  const on = !rede.every(f => f.include);
+  rede.forEach(f => { f.include = on; f.note = ''; });
+  renderWeeklySheet();
+}
+function weeklySetKind(i, kind) {
+  const f = _weekly.files[i];
+  if (!f || !kind) return;
+  f.kind = kind;
+  f.sub = kind === 'loc' ? locSubKind(f.rows) : '';
+  f.week = inferFileWeek(kind, f.rows, f.name);
+  weeklyApplyRules();
+  renderWeeklySheet();
+}
+function weeklyRestart() { _weekly = { stage: 'start', files: [], week: '', result: null }; renderWeeklySheet(); }
+
+function renderWeeklySheet() {
+  const body = document.getElementById('weeklyBody');
+  if (!body || !_weekly) return;
+  const w = _weekly;
+  if (w.stage === 'start') {
+    body.innerHTML = `
+      <div style="font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:12px;">Escolhe <strong>todos os ficheiros da semana de uma vez</strong> (Digitais, Analógicos, Localizações, campanhas "Rede_…" e o master). A app reconhece cada um pelo conteúdo e mostra um resumo antes de importar.</div>
+      <div class="drop-zone" onclick="document.getElementById('weeklyFilesInput').click()" ondragover="event.preventDefault(); this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="weeklyDrop(event)">
+        <div class="drop-icon">📥</div><div class="drop-title">Escolher ficheiros</div><div class="drop-sub">ou arrasta-os para aqui</div>
+      </div>`;
+    return;
+  }
+  if (w.stage === 'review') {
+    const files = w.files;
+    const sel = files.filter(f => f.include && f.kind).length;
+    const rede = files.filter(f => f.kind === 'rede');
+    const wn = parseInt(String(w.week).replace(/\D/g, '')) || '';
+    let html = `<div class="link-section" style="margin-top:0">Semana</div>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+        <span style="font-weight:700">S</span>
+        <input class="edit-input" id="weeklyWeek" type="number" inputmode="numeric" min="1" max="53" style="width:96px" value="${wn}" onchange="weeklySetWeek(this.value)">
+        <span style="font-size:12px; color:var(--muted)">proposta pelas datas dos ficheiros; podes alterar</span>
+      </div>
+      <div class="link-section">Ficheiros reconhecidos</div>`;
+    const kindName = f => f.kind === 'loc' ? (f.sub === 'metroip' ? 'Localizações Metro/IP' : 'Localizações Rua') : KIND_LABEL[f.kind];
+    const wk = f => f.week ? ` · semana provável S${f.week}` : '';
+    files.forEach((f, i) => {
+      if (f.kind === 'rede') return;
+      if (!f.kind) {
+        html += `<div class="wk-row"><div class="miss-info"><div class="miss-name" style="word-break:break-all">${escHtml(f.name)}</div><div class="miss-meta" style="color:var(--orange)">Não reconheci este ficheiro. O que é?</div></div>
+          <select class="edit-input" style="width:auto; padding:6px 8px; font-size:13px" onchange="weeklySetKind(${i}, this.value)"><option value="">Escolher…</option>${KIND_ORDER.map(k => `<option value="${k}">${KIND_LABEL[k]}</option>`).join('')}</select></div>`;
+        return;
+      }
+      html += `<label class="wk-row"><input type="checkbox" ${f.include ? 'checked' : ''} onchange="weeklyToggle(${i})"><div class="miss-info"><div class="miss-name" style="word-break:break-all">${escHtml(f.name)}</div><div class="miss-meta">${escHtml(kindName(f))}${f.kind === 'master' ? '' : wk(f)}${f.note ? ` · <span style="color:var(--orange)">${escHtml(f.note)}</span>` : ''}</div></div></label>`;
+    });
+    if (rede.length) {
+      const ws = rede.filter(f => f.week).map(f => f.week);
+      html += `<label class="wk-row"><input type="checkbox" ${rede.every(f => f.include) ? 'checked' : ''} onchange="weeklyToggleRede()"><div class="miss-info"><div class="miss-name">${rede.length} ficheiros de campanhas digitais (Rede)</div><div class="miss-meta">${escHtml(rede.map(f => redeNameFromFile(f.name)).join(', '))}${ws.length ? ` · datas: S${Math.min(...ws)}${Math.max(...ws) !== Math.min(...ws) ? '–S' + Math.max(...ws) : ''}` : ''}</div></div></label>`;
+    }
+    html += `<button class="btn btn-primary" style="width:100%; margin-top:16px" onclick="weeklyImport()" ${sel && wn ? '' : 'disabled'}>Importar ${sel} ficheiro${sel === 1 ? '' : 's'} para S${wn || '?'}</button>
+      <button class="btn btn-ghost" style="width:100%; margin-top:8px" onclick="weeklyRestart()">Escolher outros ficheiros</button>`;
+    body.innerHTML = html;
+    return;
+  }
+  // resultado
+  const r = w.result;
+  let html = `<div class="link-section" style="margin-top:0">Semana ${escHtml(w.week)}</div>`;
+  r.lines.forEach(l => {
+    html += `<div class="miss-row"><div class="miss-info"><div class="miss-name">${escHtml(l.label)}</div><div class="miss-meta">${escHtml(l.text)}</div></div><div class="miss-count" style="color:${l.ok ? 'var(--green)' : 'var(--orange)'}">${l.ok ? '✓' : '⚠️'}</div></div>`;
+  });
+  if (r.skipped.length) html += `<div class="export-warn">Não importados: ${escHtml(r.skipped.map(s => `${s.name} (${s.why})`).join('; '))}</div>`;
+  if (r.pending > 0) html += `<button class="btn btn-primary" style="width:100%; margin-top:14px" onclick="closeSheet('weeklySheet'); openLinkSheet();">Ligar ${r.pending} campanha${r.pending === 1 ? '' : 's'} aos ficheiros de localizações</button>`;
+  html += `<button class="btn btn-ghost" style="width:100%; margin-top:8px" onclick="closeSheet('weeklySheet'); openExportSheet();">Exportar para reconhecimento</button>
+    <button class="btn btn-ghost" style="width:100%; margin-top:8px" onclick="closeSheet('weeklySheet'); switchTab('field');">Ver campanhas</button>`;
+  body.innerHTML = html;
+}
+
+// Importa tudo, pela ordem certa (a ordem importa: ajustes e ligações dependem do que já está carregado)
+function weeklyImport() {
+  const w = _weekly;
+  const W = w.week;
+  if (!/^S\d{1,2}$/.test(W)) { showToast('Indica o número da semana'); return; }
+  const sel = w.files.filter(f => f.include && f.kind);
+  if (!sel.length) { showToast('Nenhum ficheiro selecionado'); return; }
+  const info = {};
+  _batchMode = true;
+  try {
+    sel.filter(f => f.kind === 'master').forEach(f => { info.master = importMasterRows(f.rows); });
+    sel.filter(f => f.kind === 'digitais').forEach(f => { _lastImport = null; processRows(f.rows, W); info.digitais = _lastImport; });
+    sel.filter(f => f.kind === 'analogicos').forEach(f => { _lastImport = null; processAnalogRows(f.rows, W); info.analogicos = _lastImport; });
+    sel.filter(f => f.kind === 'loc').forEach(f => processLocationFile(f.rows, f.name, W));
+    const rede = sel.filter(f => f.kind === 'rede').map(f => {
+      const p = parseRedeRows(f.rows);
+      return { name: redeNameFromFile(f.name), file: f.name, faces: p.faces, start: p.start, expected: expectedLx(f.name) };
+    }).filter(p => p.faces.length);
+    if (rede.length) { importRedeFiles(rede, W); info.rede = rede.length; }
+  } finally {
+    // mantém o modo de lote um pouco mais: os avisos de ligação dos analógicos disparam ~300 ms depois
+    setTimeout(() => { _batchMode = false; }, 1000);
+  }
+
+  if (state.weeks[W]) { state.activeWeek = W; }
+  state.activeType = 'digital'; state.activeTypeFilter = 'all'; state.activeZone = 'all'; state.activeStatusFilter = 'pending';
+  w.result = weeklyBuildResult(W, info, w.files.filter(f => !(f.include && f.kind)).map(f => ({ name: f.name, why: f.kind ? (f.note || 'desmarcado') : 'não reconhecido' })));
+  w.stage = 'result';
+  saveState();
+  renderAll();
+  renderWeeklySheet();
+  showToast(`✓ Semana ${W} carregada`);
+}
+
+// Resumo da semana: o que está carregado e o que falta
+function weeklyBuildResult(W, info, skipped) {
+  const wk = state.weeks[W] || { campaigns: [] };
+  const dig = wk.campaigns.filter(c => c.subtype !== 'analog').length;
+  const an = wk.campaigns.filter(c => c.subtype === 'analog').length;
+  const loc = t => Object.values(state.mapData || {}).reduce((s, a) => s + a.filter(e => e.week === W && e.tipo === t).length, 0);
+  const lf = (state.locFiles || {})[W] || {};
+  const rd = (state.digitalFaces || {})[W] || {};
+  const nRede = Object.keys(rd).length;
+  const lines = [];
+  const imp = (i, n) => i && i.imported != null ? ` (${i.imported} importadas${i.skipped ? `, ${i.skipped} ignoradas` : ''})` : '';
+  lines.push({ ok: dig > 0, label: 'Campanhas digitais', text: dig ? `${dig} campanhas${imp(info.digitais)}` : 'falta o ficheiro dos Digitais' });
+  lines.push({ ok: an > 0, label: 'Campanhas analógicas', text: an ? `${an} campanhas${imp(info.analogicos)}` : (info.analogicos ? 'o ficheiro não tem linhas para esta semana' : 'falta o ficheiro dos Analógicos') });
+  lines.push({ ok: !!lf.rua, label: 'Localizações Rua', text: lf.rua ? `${loc('rua')} localizações` : 'falta o ficheiro' });
+  lines.push({ ok: !!lf.metroip, label: 'Localizações Metro/IP', text: lf.metroip ? `${loc('metro') + loc('ip')} localizações` : 'falta o ficheiro' });
+  let facesTxt = 'faltam os ficheiros "Rede_…"';
+  if (nRede) {
+    let tot = 0, ok = 0;
+    Object.keys(rd).forEach(n => { const d = digitalCampaignData(W, n); if (d) { tot += d.total; ok += d.located.length; } });
+    facesTxt = `${nRede} campanhas, ${ok} de ${tot} faces localizadas no master`;
+  }
+  lines.push({ ok: nRede > 0, label: 'Campanhas para o mapa digital', text: facesTxt });
+  const nM = state.digitalMaster && state.digitalMaster.items ? state.digitalMaster.items.length : 0;
+  lines.push({ ok: nM > 0, label: 'Master dos mupis digitais', text: nM ? `${nM} suportes` : 'ainda não carregado' });
+  return { lines, skipped, pending: (an && (lf.rua || lf.metroip)) ? pendingLinkCount(W) : 0 };
+}
+
+// ══════════════════════════════════════════════════════════════
+// CRIAR CAMPANHA MANUALMENTE (venda a meio da semana)
+// ══════════════════════════════════════════════════════════════
+var _nc = { kind: 'digital', touched: false };
+var NC_DIG_TYPES = [
+  ['tv', 'Ecrãs TV', 'Digital - Ecrãs TV', ''],
+  ['leds', "Led's", "Digital - Ecrãs Led's", ''],
+  ['4x3', 'Led 4x3', "Digital - Ecrãs Led's", 'Led 4x3'],
+  ['flagship', 'Flagship', "Digital - Ecrãs Led's", 'Flagship'],
+  ['tomi', 'Tomi', 'Tomi', ''],
+  ['3ecras', '3 Ecrãs', 'Digital – 3 ecrãs', '']
+];
+
+// Fotos por formato nos analógicos (mesmas regras da importação)
+function analogQuantities(formato) {
+  const fUp = String(formato || '').toUpperCase();
+  let r = 0, m = 0, ip = 0;
+  if (fUp.includes('MUPI')) { r = 2; m = 2; ip = 2; }
+  else if (fUp.includes('PPA')) { r = 5; }
+  else if (fUp.includes('8X3')) { r = 3; }
+  else if (fUp.includes('PARED')) { m = 1; }
+  else if (fUp.includes('ATM')) { r = 2; }
+  else if (fUp.replace(/\s/g, '').includes('4PLUS') || fUp.includes('4 PLUS') || fUp.includes('(4X1')) { m = 3; }
+  else if (fUp.includes('ELÉT') || fUp.includes('ELET') || fUp.includes('RI AUTO') || fUp.includes('CARRIS') || fUp.includes('STCP')) { r = 4; }
+  else if (fUp.includes('FLASH')) { m = 3; }
+  else { m = 1; } // Abrigos, Ativação, Canais, Colunas, Sancas, etc.
+  return { r, m, ip };
+}
+
+function openNewCampSheet() {
+  _nc = { kind: state.activeType === 'analog' ? 'analog' : 'digital', touched: false };
+  renderNewCampSheet();
+  openSheet('newCampSheet');
+}
+
+function renderNewCampSheet() {
+  const wn = parseInt(String(state.activeWeek || '').replace(/\D/g, '')) || '';
+  const formatos = [...new Set(Object.values(state.weeks || {}).flatMap(w => (w.campaigns || []).filter(c => c.subtype === 'analog').map(c => c.formato1 || c.suporte)).filter(Boolean))].sort();
+  const dig = _nc.kind === 'digital';
+  document.getElementById('newCampBody').innerHTML = `
+    <div class="seg" style="margin-bottom:6px">
+      <button class="seg2-btn ${dig ? 'active' : ''}" onclick="setNewCampKind('digital')">Digital</button>
+      <button class="seg2-btn ${dig ? '' : 'active'}" onclick="setNewCampKind('analog')">Analógico</button>
+    </div>
+    <label class="edit-label">Semana</label>
+    <div style="display:flex; align-items:center; gap:8px;"><span style="font-weight:700">S</span>
+      <input class="edit-input" id="ncWeek" type="number" inputmode="numeric" min="1" max="53" style="width:96px" value="${wn}"></div>
+    <label class="edit-label">Nome da campanha</label>
+    <input class="edit-input" id="ncNome" oninput="ncRecalc()">
+    <label class="edit-label">Nº de venda</label>
+    <input class="edit-input" id="ncVenda" placeholder="V.1234/26 (se ainda não houver, deixa em branco)">
+    <label class="edit-label">Anunciante (opcional)</label>
+    <input class="edit-input" id="ncAnunc">
+    <div id="ncDig" style="display:${dig ? 'block' : 'none'}">
+      <label class="edit-label">Suporte</label>
+      <select class="edit-input" id="ncTipoDig" onchange="ncRecalc(true)">${NC_DIG_TYPES.map(t => `<option value="${t[0]}">${t[1]}</option>`).join('')}</select>
+    </div>
+    <div id="ncAn" style="display:${dig ? 'none' : 'block'}">
+      <label class="edit-label">Suporte (formato)</label>
+      <input class="edit-input" id="ncSupAn" list="ncFormatos" placeholder="ex.: Mupis 4/0" oninput="ncRecalc(true)">
+      <datalist id="ncFormatos">${formatos.map(f => `<option value="${escHtml(f)}">`).join('')}</datalist>
+    </div>
+    <label class="edit-label">Rede / Isolado (opcional)</label>
+    <input class="edit-input" id="ncRede" oninput="ncRecalc()">
+    <label class="edit-label">Fotos a fotografar</label>
+    <div class="edit-qty">
+      <div><label>Rua</label><input class="edit-input" id="ncR" type="number" inputmode="numeric" min="0" max="99" value="0" oninput="_nc.touched = true"></div>
+      <div><label>Metro</label><input class="edit-input" id="ncM" type="number" inputmode="numeric" min="0" max="99" value="0" oninput="_nc.touched = true"></div>
+      <div><label>IP</label><input class="edit-input" id="ncIP" type="number" inputmode="numeric" min="0" max="99" value="0" oninput="_nc.touched = true"></div>
+    </div>
+    <div class="alias-hint">Os valores vêm das regras do suporte; podes alterá-los.</div>
+    <label class="edit-label">Observações (opcional)</label>
+    <textarea class="edit-input" id="ncNotas" rows="2" oninput="ncRecalc()"></textarea>
+    <button class="btn btn-primary" style="width:100%; margin-top:18px" onclick="createManualCampaign()">Criar campanha</button>`;
+  ncRecalc(true);
+}
+
+function setNewCampKind(k) {
+  _nc.kind = k === 'analog' ? 'analog' : 'digital';
+  _nc.touched = false;
+  const keep = { w: ncVal('ncWeek'), n: ncVal('ncNome'), v: ncVal('ncVenda'), a: ncVal('ncAnunc'), r: ncVal('ncRede'), o: ncVal('ncNotas') };
+  renderNewCampSheet();
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('ncWeek', keep.w); set('ncNome', keep.n); set('ncVenda', keep.v); set('ncAnunc', keep.a); set('ncRede', keep.r); set('ncNotas', keep.o);
+  ncRecalc(true);
+}
+function ncVal(id) { const el = document.getElementById(id); return el ? String(el.value == null ? '' : el.value) : ''; }
+
+// "formato" e "rede" que a app guarda para o suporte digital escolhido
+function ncDigitalStrings() {
+  const t = NC_DIG_TYPES.find(x => x[0] === (ncVal('ncTipoDig') || 'tv')) || NC_DIG_TYPES[0];
+  let rede = ncVal('ncRede').trim();
+  if (t[3] && !normTxt(rede).replace(/\s/g, '').includes(normTxt(t[3]).replace(/\s/g, ''))) rede = (t[3] + ' ' + rede).trim();
+  return { suporte: t[2], rede };
+}
+
+// Preenche as fotos com as regras do suporte (se o utilizador ainda não as mexeu)
+function ncRecalc(force) {
+  if (force) _nc.touched = false;
+  if (_nc.touched) return;
+  let q;
+  if (_nc.kind === 'digital') {
+    const s = ncDigitalStrings();
+    q = classifyDigital(s.suporte, s.rede, ncVal('ncNotas'), ncVal('ncNome'));
+  } else {
+    q = analogQuantities(ncVal('ncSupAn'));
+  }
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('ncR', q.r); set('ncM', q.m); set('ncIP', q.ip);
+}
+
+function createManualCampaign() {
+  const nome = ncVal('ncNome').trim();
+  const wn = parseInt(ncVal('ncWeek'));
+  const num = id => Math.max(0, Math.min(99, parseInt(ncVal(id)) || 0));
+  if (!nome) { showToast('Indica o nome da campanha'); return; }
+  if (!wn || wn < 1 || wn > 53) { showToast('Indica a semana (1 a 53)'); return; }
+  const analog = _nc.kind === 'analog';
+  const sup = analog ? ncVal('ncSupAn').trim() : '';
+  if (analog && !sup) { showToast('Indica o suporte (formato)'); return; }
+  const week = 'S' + wn;
+  if (!state.weeks[week]) state.weeks[week] = { campaigns: [], loaded: new Date().toLocaleDateString('pt') };
+  const camps = state.weeks[week].campaigns;
+
+  let venda = ncVal('ncVenda').trim();
+  if (!venda) { let k = 1; while (camps.some(c => c.venda === 'SVM' + k)) k++; venda = 'SVM' + k; }
+  const anunc = ncVal('ncAnunc').trim();
+  const notas = ncVal('ncNotas').trim();
+  let c;
+  if (analog) {
+    const q = analogQuantities(sup);
+    c = {
+      venda, campanha: nome, anunciante: anunc, rede: ncVal('ncRede').trim(),
+      suporte: sup.split('\n')[0].split('/')[0].trim(), formato1: sup.split('\n')[0].trim(),
+      subtype: 'analog', notas, base: { ...q }, r: q.r, m: q.m, ip: q.ip, manual: true
+    };
+  } else {
+    const s = ncDigitalStrings();
+    const q = classifyDigital(s.suporte, s.rede, notas, nome);
+    c = { venda, campanha: nome, anunciante: anunc, marca: '', suporte: s.suporte, rede: s.rede, subtype: q.subtype, tipo: q.tipo, notas, r: q.r, m: q.m, ip: q.ip, manual: true };
+  }
+  if (camps.some(x => campaignId(x) === campaignId(c))) { showToast('Já existe esta campanha (mesma venda e suporte) em ' + week); return; }
+  camps.push(c);
+
+  // valores automáticos (regras, Tomi, ajustes de localizações) e depois as fotos escolhidas à mão
+  if (analog) applyLocationAdjustments(week); else applyDigitalRules(week);
+  if (_nc.touched) {
+    const mine = { r: num('ncR'), m: num('ncM'), ip: num('ncIP') };
+    const cur = camps.find(x => campaignId(x) === campaignId(c));
+    const q = {};
+    ['r', 'm', 'ip'].forEach(z => { if (mine[z] !== cur[z]) q[z] = mine[z]; });
+    if (Object.keys(q).length) { state.edits[editKey(week, cur)] = { q }; reapplyEdits(week); }
+  }
+
+  state.activeWeek = week;
+  state.activeType = analog ? 'analog' : 'digital';
+  state.activeTypeFilter = 'all'; state.activeZone = 'all'; state.activeStatusFilter = 'pending';
+  saveState();
+  closeSheet('newCampSheet');
+  renderAll();
+  showToast(`✓ Campanha criada em ${week}`);
 }
 
 // ══════════════════════════════════════════════════════════════
