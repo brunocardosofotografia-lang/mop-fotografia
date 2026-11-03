@@ -242,6 +242,9 @@
   .export-warn { font-size:12px; color:var(--orange); background:var(--orange-light); border-radius:var(--radius-sm); padding:9px 12px; margin-top:10px; line-height:1.5; }
   .alias-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .alias-hint { font-size:11px; color:var(--muted); margin-top:6px; }
+  .seg { display:flex; background:var(--surface2); border-radius:10px; padding:3px; margin-bottom:12px; gap:3px; }
+  .seg-btn { flex:1; padding:8px; border:none; border-radius:8px; background:transparent; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+  .seg-btn.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
   .done-toggle {
     width:100%; margin:6px 0 10px; padding:12px; border:1px dashed var(--border);
     background:transparent; border-radius:var(--radius-sm); color:var(--muted);
@@ -510,9 +513,20 @@
 
 <!-- MAP -->
 <div class="view" id="view-map">
+  <div class="seg" id="mapModeBar">
+    <button class="seg-btn" data-mode="analog" onclick="setMapMode('analog')">Analógicos</button>
+    <button class="seg-btn" data-mode="digital" onclick="setMapMode('digital')">Digitais</button>
+  </div>
+  <div id="digitalMapBar" style="display:none; gap:8px; margin-bottom:12px;">
+    <select id="digitalWeekSelect" onchange="setDigitalWeek(this.value)"
+      style="padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
+             color:var(--text); font-size:14px; font-family:-apple-system,sans-serif; outline:none; box-shadow:var(--shadow);"></select>
+    <button class="btn btn-ghost" style="flex:1" onclick="openDigitalSheet()">Importar mupis digitais</button>
+  </div>
   <div id="mapEmpty" class="empty">
     <div class="empty-icon">🗺️</div>
     <div class="empty-text" id="mapEmptyText">Importa localizações (Rua / Metro / IP) para ver o mapa</div>
+    <button class="btn btn-primary" id="mapEmptyBtn" style="display:none; margin-top:14px" onclick="openDigitalSheet()">Carregar mupis digitais</button>
   </div>
   <div id="mapContent" style="display:none">
     <div style="font-size:12px; color:var(--muted); margin-bottom:10px; display:flex; gap:14px; align-items:center;">
@@ -615,7 +629,8 @@
   <div class="upload-success" id="uploadSuccess"></div>
   <div class="import-stats" id="importStats"></div>
   <button class="btn btn-ghost" style="width:100%; margin-bottom:10px;" onclick="openLinkSheet()">🔗 Ligar campanhas aos ficheiros de localizações</button>
-  <button class="btn btn-ghost" style="width:100%; margin-bottom:16px;" onclick="openExportSheet()">📤 Exportar para reconhecimento</button>
+  <button class="btn btn-ghost" style="width:100%; margin-bottom:10px;" onclick="openExportSheet()">📤 Exportar para reconhecimento</button>
+  <button class="btn btn-ghost" style="width:100%; margin-bottom:16px;" onclick="openDigitalSheet()">🗺️ Mupis digitais no mapa</button>
 
   <div style="margin-bottom: 16px;">
     <div style="font-size:13px; color:var(--muted); margin-bottom:10px; font-weight:500;">SEMANAS CARREGADAS</div>
@@ -706,6 +721,22 @@
   </div>
 </div>
 
+<div class="sheet-overlay" id="digitalSheet" onclick="if(event.target===this) closeSheet('digitalSheet')">
+  <div class="sheet">
+    <div class="sheet-head"><div class="sheet-title">Mupis digitais no mapa</div><button class="sheet-close" onclick="closeSheet('digitalSheet')">✕</button></div>
+    <input type="file" id="masterFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleMasterFile(this.files[0])">
+    <input type="file" id="redeFilesInput" accept=".xlsx,.xls" multiple style="display:none" onchange="handleRedeFiles(this.files)">
+    <div class="sheet-body" id="digitalBody"></div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="facesSheet" onclick="if(event.target===this) closeSheet('facesSheet')">
+  <div class="sheet">
+    <div class="sheet-head"><div class="sheet-title" id="facesTitle">Sem localização</div><button class="sheet-close" onclick="closeSheet('facesSheet')">✕</button></div>
+    <div class="sheet-body" id="facesBody"></div>
+  </div>
+</div>
+
 <div class="sheet-overlay" id="editSheet" onclick="if(event.target===this) closeSheet('editSheet')">
   <div class="sheet">
     <div class="sheet-head"><div class="sheet-title">Editar campanha</div><button class="sheet-close" onclick="closeSheet('editSheet')">✕</button></div>
@@ -759,6 +790,10 @@ var state = {
   locIgnore: {},    // { chaveCampanha: true } — campanhas a não ajustar
   adjOff: {},       // { campaignId: true } — ajustes desfeitos pelo utilizador
   locFiles: {},     // { semana: { rua: true, metroip: true } } — ficheiros carregados
+  digitalMaster: null, // master dos mupis digitais { loaded, items: [...] }
+  digitalFaces: {},   // { semana: { campanha: { faces: [...], file, esperadasLx } } }
+  mapMode: 'analog',  // mapa: 'analog' | 'digital'
+  mapDigitalWeek: null,
   aliasNames: {},   // { chaveCampanha: ['Outro nome', ...] } — "outros nomes" para o reconhecimento
   edits: {},        // { 'S40|campaignId': { campanha?, notas?, q?: {r,m,ip} } } — edições manuais
   currentTab: 'home',
@@ -777,11 +812,12 @@ function loadState() {
 }
 
 function ensureState() {
-  ['weeks', 'progress', 'mapData', 'edits', 'aliasNames', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
+  ['weeks', 'progress', 'mapData', 'edits', 'aliasNames', 'digitalFaces', 'locAliases', 'locIgnore', 'adjOff', 'locFiles'].forEach(k => {
     if (!state[k] || typeof state[k] !== 'object') state[k] = {};
   });
   if (!state.activeStatusFilter) state.activeStatusFilter = 'pending';
   if (!state.activeZone) state.activeZone = 'all';
+  if (!state.mapMode) state.mapMode = 'analog';
   if ((state.uiv || 0) < 2) { state.activeStatusFilter = 'pending'; state.uiv = 2; } // novo padrão: "Por fazer"
   if (!state.activeTypeFilter) state.activeTypeFilter = 'all';
 }
@@ -1660,6 +1696,7 @@ function clearAllData() {
   if (!confirm('Apagar todos os dados? Esta ação não pode ser revertida.')) return;
   state = { weeks: {}, progress: {}, activeWeek: null, activeStatusFilter: 'pending', activeTypeFilter: 'all', activeZone: 'all', uiv: 2, currentTab: 'home' };
   ensureState();
+  _masterIdx = null; _digitalSummary = null;
   saveState();
   renderAll();
   document.getElementById('importStats').style.display = 'none';
@@ -1844,6 +1881,8 @@ function exportProgress() {
     mapData: state.mapData || {},
     edits: state.edits || {},
     aliasNames: state.aliasNames || {},
+    digitalFaces: state.digitalFaces || {},
+    digitalMaster: state.digitalMaster || null,
     locAliases: state.locAliases || {},
     locIgnore: state.locIgnore || {},
     adjOff: state.adjOff || {},
@@ -1875,6 +1914,8 @@ function importProgress(file) {
       if (data.activeWeek) state.activeWeek = data.activeWeek;
       if (data.activeType) state.activeType = data.activeType;
       if (data.mapData) state.mapData = { ...(state.mapData || {}), ...data.mapData };
+      if (data.digitalFaces) state.digitalFaces = { ...(state.digitalFaces || {}), ...data.digitalFaces };
+      if (data.digitalMaster) { state.digitalMaster = data.digitalMaster; _masterIdx = null; }
       if (data.aliasNames) state.aliasNames = { ...(state.aliasNames || {}), ...data.aliasNames };
       if (data.edits) state.edits = { ...(state.edits || {}), ...data.edits };
       if (data.locAliases) state.locAliases = { ...(state.locAliases || {}), ...data.locAliases };
@@ -2680,6 +2721,401 @@ function downloadRecognitionCSV() {
 }
 
 // ══════════════════════════════════════════════════════════════
+// MUPIS DIGITAIS NO MAPA (master de localizações + ficheiros das campanhas)
+// ══════════════════════════════════════════════════════════════
+var _masterIdx = null;
+var _digitalSummary = null;
+var _missingFor = null;
+
+function weekNumOf(w) { return parseInt(String(w).slice(1)) || 0; }
+
+// Semana ISO a partir de "10/28/2026" (M/D/AAAA) ou "2026-10-28"
+function isoWeekOf(dateStr) {
+  let y, m, d;
+  let t = String(dateStr || '').trim();
+  let a = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (a) { m = +a[1]; d = +a[2]; y = +a[3]; }
+  else if ((a = t.match(/^(\d{4})-(\d{2})-(\d{2})/))) { y = +a[1]; m = +a[2]; d = +a[3]; }
+  else return null;
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+}
+
+// "Rede_AbolaNegra-28_10_-_90_Mupis__50_Lx_e_40_Pt_.xls" → "AbolaNegra"
+function redeNameFromFile(fileName) {
+  let s = String(fileName || '').replace(/\.[^.]+$/, '');
+  const m = s.match(/^Rede[_\s-]+(.+?)[-_\s]+\d{1,2}[_-]\d{1,2}(?=[^0-9]|$)/i);
+  s = m ? m[1] : s.replace(/^Rede[_\s-]+/i, '');
+  return s.replace(/_+/g, ' ').replace(/\s+/g, ' ').trim() || String(fileName);
+}
+// Nº de mupis em Lisboa indicado no nome do ficheiro ("50_Lx", "60_Mupis_Lx")
+function expectedLx(fileName) {
+  const s = String(fileName || '');
+  let m = s.match(/(\d+)_*Lx/i) || s.match(/(\d+)_Mupis_*Lx/i);
+  return m ? parseInt(m[1]) : null;
+}
+
+// Lê as faces de um ficheiro de campanha (blocos "Sales Market / Media / Face # / Description")
+function parseRedeRows(rows) {
+  const faces = [];
+  let start = '';
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i] || [];
+    if (String(r[0] == null ? '' : r[0]).trim() !== 'Sales Market') continue;
+    const hdr = r.map(c => String(c == null ? '' : c).trim());
+    const iMedia = hdr.indexOf('Media'), iStart = hdr.indexOf('Start Date');
+    const meta = rows[i + 1] || [];
+    const media = iMedia >= 0 ? String(meta[iMedia] == null ? '' : meta[iMedia]).trim() : '';
+    if (!start && iStart >= 0) start = String(meta[iStart] == null ? '' : meta[iStart]).trim();
+    const sub = (rows[i + 2] || []).map(c => String(c == null ? '' : c).trim());
+    const iFace = sub.indexOf('Face #'), iDesc = sub.indexOf('Description');
+    if (iFace < 0 || iDesc < 0) continue;
+    for (let j = i + 3; j < rows.length; j++) {
+      const rj = rows[j] || [];
+      const face = String(rj[iFace] == null ? '' : rj[iFace]).trim();
+      if (!face || face === 'Sales Market') break;
+      faces.push({ face, desc: String(rj[iDesc] == null ? '' : rj[iDesc]).trim(), media });
+    }
+  }
+  return { faces, start };
+}
+
+// Lê o master de localizações (uma entrada por código de suporte)
+function parseMasterRows(rows) {
+  let hi = -1;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const cells = (rows[i] || []).map(c => normTxt(c).trim());
+    if (cells.includes('ID SUPORTE') && cells.includes('LATITUDE') && cells.includes('LONGITUDE')) { hi = i; break; }
+  }
+  if (hi < 0) return { error: 'Não encontrei as colunas ID Suporte, Latitude e Longitude' };
+  const hdr = rows[hi].map(c => normTxt(c).trim());
+  const col = name => hdr.indexOf(name);
+  const iId = col('ID SUPORTE'), iCod = hdr.findIndex(h => h.startsWith('DESCRI')), iLat = col('LATITUDE'), iLng = col('LONGITUDE');
+  const iEnd = col('ENDERECO'), iEnd2 = col('ENDERECO II'), iRef = hdr.findIndex(h => h.startsWith('PONTO REF'));
+  const iFreg = col('FREGUESIA'), iCon = col('CONCEDENTE');
+  if (iCod < 0) return { error: 'Não encontrei a coluna Descrição (código do suporte)' };
+  const num = v => parseFloat(String(v == null ? '' : v).replace(',', '.'));
+  const txt = (r, i) => i >= 0 && r[i] != null ? String(r[i]).trim() : '';
+  const byCode = new Map();
+  rows.slice(hi + 1).forEach(r => {
+    const code = txt(r, iCod).replace(/\s+/g, '').toUpperCase();
+    const lat = num(r[iLat]), lng = num(r[iLng]);
+    if (!code || isNaN(lat) || isNaN(lng) || byCode.has(code)) return;
+    const con = normTxt(txt(r, iCon));
+    byCode.set(code, {
+      id: iId >= 0 ? (parseInt(parseFloat(r[iId])) || null) : null,
+      code, lat, lng,
+      end: txt(r, iEnd), end2: txt(r, iEnd2), ref: txt(r, iRef), freg: txt(r, iFreg),
+      tipo: con.includes('METRO') ? 'metro' : (/\bIP\b/.test(con) ? 'ip' : 'rua')
+    });
+  });
+  const items = [...byCode.values()];
+  if (!items.length) return { error: 'Nenhuma linha com código e coordenadas' };
+  return { items };
+}
+
+function masterIndex() {
+  if (_masterIdx) return _masterIdx;
+  const idx = { byId: new Map(), byCode: new Map() };
+  ((state.digitalMaster || {}).items || []).forEach(it => {
+    if (it.id != null) idx.byId.set(it.id, it);
+    idx.byCode.set(it.code, it);
+  });
+  return (_masterIdx = idx);
+}
+// Código "DM-0007", "DM-ME-00728I", "2DM-0026I" no início da descrição
+function faceCode(desc) {
+  const m = String(desc || '').match(/^\s*(\d?DM-(?:[A-Za-z]{2}-)?\s*\d+[A-Za-z]?)/i);
+  return m ? m[1].replace(/\s+/g, '').toUpperCase() : null;
+}
+// Liga uma face ao master: primeiro pelo Face # (= ID Suporte), depois pelo código da descrição
+function matchFace(f, idx) {
+  if (/^\d{5,6}$/.test(f.face)) {
+    const a = idx.byId.get(parseInt(f.face, 10));
+    if (a) return a;
+  }
+  const c = faceCode(f.desc);
+  return c ? (idx.byCode.get(c) || null) : null;
+}
+
+function digitalWeeks() {
+  return Object.keys(state.digitalFaces || {}).filter(w => Object.keys(state.digitalFaces[w] || {}).length)
+    .sort((a, b) => weekNumOf(b) - weekNumOf(a));
+}
+function digitalWeekInUse() {
+  const ws = digitalWeeks();
+  if (state.mapDigitalWeek && ws.includes(state.mapDigitalWeek)) return state.mapDigitalWeek;
+  if (state.activeWeek && ws.includes(state.activeWeek)) return state.activeWeek;
+  return ws[0] || null;
+}
+function digitalCampaignNames(week) {
+  return Object.keys(((state.digitalFaces || {})[week]) || {}).sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
+}
+
+// Cruza as faces de uma campanha com o master
+function digitalCampaignData(week, name) {
+  const rec = ((state.digitalFaces || {})[week] || {})[name];
+  if (!rec) return null;
+  const idx = masterIndex();
+  const located = [], missing = [];
+  rec.faces.forEach(f => {
+    const it = matchFace(f, idx);
+    if (it) located.push({ ...f, item: it });
+    else missing.push({ ...f, tomi: /TOMI/i.test(f.media) || /TOMI/i.test(f.desc) });
+  });
+  const g = new Map();
+  located.forEach(x => {
+    const k = x.item.lat + ',' + x.item.lng;
+    if (!g.has(k)) g.set(k, { lat: x.item.lat, lng: x.item.lng, tipo: x.item.tipo, end: x.item.end, end2: x.item.end2, ref: x.item.ref, codes: [] });
+    const e = g.get(k);
+    if (!e.codes.includes(x.item.code)) e.codes.push(x.item.code);
+  });
+  return { rec, total: rec.faces.length, located, missing, groups: [...g.values()], expected: rec.esperadasLx || null };
+}
+
+// ── Importação ──
+function readFileRows(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' }));
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('Erro ao ler o ficheiro'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function handleMasterFile(file) {
+  if (!file) return;
+  try { importMasterRows(await readFileRows(file)); }
+  catch (err) { console.error(err); showToast('❌ Erro ao ler o master: ' + err.message); }
+  try { document.getElementById('masterFileInput').value = ''; } catch (e) {}
+}
+function importMasterRows(rows) {
+  const res = parseMasterRows(rows);
+  if (res.error) { showToast('❌ ' + res.error); return false; }
+  state.digitalMaster = { loaded: new Date().toLocaleDateString('pt'), items: res.items };
+  _masterIdx = null;
+  saveState();
+  renderDigitalSheet();
+  renderMapView();
+  showToast(`✓ Master carregado: ${res.items.length} suportes`);
+  return true;
+}
+
+async function handleRedeFiles(fileList) {
+  const files = [...(fileList || [])];
+  if (!files.length) return;
+  const parsed = [];
+  for (const f of files) {
+    try {
+      const p = parseRedeRows(await readFileRows(f));
+      if (p.faces.length) parsed.push({ name: redeNameFromFile(f.name), file: f.name, faces: p.faces, start: p.start, expected: expectedLx(f.name) });
+      else showToast('⚠️ Sem faces em ' + f.name);
+    } catch (err) { console.error(err); showToast('❌ Erro em ' + f.name); }
+  }
+  try { document.getElementById('redeFilesInput').value = ''; } catch (e) {}
+  if (!parsed.length) { showToast('❌ Nenhum ficheiro de campanha reconhecido'); return; }
+  // Semana sugerida pelas datas dos ficheiros (o utilizador confirma)
+  const suggested = isoWeekOf((parsed.find(p => p.start) || {}).start);
+  askWeek(week => importRedeFiles(parsed, week));
+  if (suggested) document.getElementById('weekModalInput').value = suggested;
+}
+
+function importRedeFiles(parsed, week) {
+  state.digitalFaces = state.digitalFaces || {};
+  const w = state.digitalFaces[week] = state.digitalFaces[week] || {};
+  parsed.forEach(p => { w[p.name] = { faces: p.faces, file: p.file, esperadasLx: p.expected || null, start: p.start || '' }; });
+  pruneDigitalFaces(6);
+  state.mapDigitalWeek = week;
+  state.mapMode = 'digital';
+  _digitalSummary = { week, names: parsed.map(p => p.name) };
+  saveState();
+  renderDigitalSheet();
+  renderMapView();
+  showToast(`✓ ${parsed.length} campanhas digitais — ${week}`);
+}
+
+function pruneDigitalFaces(keep) {
+  const ws = Object.keys(state.digitalFaces || {}).sort((a, b) => weekNumOf(b) - weekNumOf(a));
+  ws.slice(keep).forEach(w => delete state.digitalFaces[w]);
+}
+function deleteDigitalWeek(i) {
+  const w = digitalWeeks()[i];
+  if (!w || !confirm(`Apagar as campanhas digitais de ${w}?`)) return;
+  delete state.digitalFaces[w];
+  if (state.mapDigitalWeek === w) state.mapDigitalWeek = null;
+  if (_digitalSummary && _digitalSummary.week === w) _digitalSummary = null;
+  saveState();
+  renderDigitalSheet();
+  renderMapView();
+}
+
+// ── Painel de importação ──
+function openDigitalSheet() { renderDigitalSheet(); openSheet('digitalSheet'); }
+
+function renderDigitalSheet() {
+  const body = document.getElementById('digitalBody');
+  if (!body) return;
+  const master = state.digitalMaster;
+  const nM = master && master.items ? master.items.length : 0;
+  const cnt = t => (master.items || []).filter(i => i.tipo === t).length;
+  let html = `<div class="link-section" style="margin-top:0">1. Master de localizações</div>`;
+  html += nM
+    ? `<div class="miss-row"><div class="miss-info"><div class="miss-name">${nM} suportes carregados</div><div class="miss-meta">Rua ${cnt('rua')} · Metro ${cnt('metro')} · IP ${cnt('ip')} · carregado em ${escHtml(master.loaded)}</div></div></div>`
+    : `<div style="font-size:13px; color:var(--muted); padding:6px 0 4px;">Ainda não carregaste o master (ficheiro com todos os mupis digitais).</div>`;
+  html += `<button class="btn btn-ghost" style="width:100%; margin-top:8px" onclick="document.getElementById('masterFileInput').click()">${nM ? 'Substituir o master' : 'Carregar o master'}</button>`;
+
+  html += `<div class="link-section">2. Ficheiros das campanhas</div>`;
+  html += `<div style="font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:8px;">Escolhe vários ficheiros de uma vez (os .xls "Rede_…"). A app pede o número da semana e cruza cada face com o master.</div>`;
+  html += `<button class="btn btn-primary" style="width:100%" onclick="document.getElementById('redeFilesInput').click()" ${nM ? '' : 'disabled'}>Carregar ficheiros das campanhas</button>`;
+  if (!nM) html += `<div class="export-warn">Carrega primeiro o master.</div>`;
+
+  if (_digitalSummary && (state.digitalFaces || {})[_digitalSummary.week] && nM) {
+    html += `<div class="link-section">Resultado — ${escHtml(_digitalSummary.week)}</div>`;
+    _digitalSummary.names.forEach(n => {
+      const d = digitalCampaignData(_digitalSummary.week, n);
+      if (!d) return;
+      const tomi = d.missing.filter(x => x.tomi).length, outras = d.missing.length - tomi;
+      const warn = d.expected && d.located.length !== d.expected;
+      html += `<div class="miss-row"><div class="miss-info"><div class="miss-name">${escHtml(n)}</div>` +
+        `<div class="miss-meta">${d.located.length} de ${d.total} faces localizadas${tomi ? ` · ${tomi} Tomi (não constam no master)` : ''}${outras ? ` · ${outras} sem correspondência` : ''}${warn ? ` · o nome do ficheiro indica ${d.expected} em Lisboa` : ''}</div></div>` +
+        `<div class="miss-count" style="color:${warn ? 'var(--orange)' : 'var(--green)'}">${warn ? '⚠️' : '✓'}</div></div>`;
+    });
+  }
+
+  const ws = digitalWeeks();
+  if (ws.length) {
+    html += `<div class="link-section">Semanas carregadas</div>`;
+    ws.forEach((w, i) => {
+      html += `<div class="miss-row"><div class="miss-info"><div class="miss-name">${escHtml(w)}</div><div class="miss-meta">${Object.keys(state.digitalFaces[w]).length} campanhas</div></div><button class="loc-btn" onclick="deleteDigitalWeek(${i})">Apagar</button></div>`;
+    });
+  }
+  body.innerHTML = html;
+}
+
+// ── Mapa: modo Analógicos / Digitais ──
+function syncMapMode() {
+  const mode = state.mapMode === 'digital' ? 'digital' : 'analog';
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-mode') === mode));
+  const bar = document.getElementById('digitalMapBar');
+  if (bar) bar.style.display = mode === 'digital' ? 'flex' : 'none';
+}
+function setMapMode(mode) {
+  state.mapMode = mode === 'digital' ? 'digital' : 'analog';
+  saveState();
+  const sel = document.getElementById('campaignSelect');
+  if (sel) sel.value = '';
+  clearMapMarkers();
+  renderMapView();
+  initLeafletMap();
+}
+function setDigitalWeek(w) {
+  state.mapDigitalWeek = w;
+  saveState();
+  const sel = document.getElementById('campaignSelect');
+  if (sel) sel.value = '';
+  clearMapMarkers();
+  renderMapView();
+}
+
+function renderDigitalMapView() {
+  const week = digitalWeekInUse();
+  const hasMaster = !!(state.digitalMaster && state.digitalMaster.items && state.digitalMaster.items.length);
+  const names = week ? digitalCampaignNames(week) : [];
+  const hasData = hasMaster && names.length > 0;
+
+  const emptyEl = document.getElementById('mapEmptyText');
+  if (emptyEl) {
+    emptyEl.textContent = !hasMaster ? 'Carrega o master dos mupis digitais para ver as localizações.'
+      : 'Carrega os ficheiros das campanhas digitais para as ver no mapa.';
+  }
+  const btn = document.getElementById('mapEmptyBtn');
+  if (btn) btn.style.display = hasData ? 'none' : 'inline-block';
+  document.getElementById('mapEmpty').style.display = hasData ? 'none' : 'block';
+  document.getElementById('mapContent').style.display = hasData ? 'block' : 'none';
+
+  // semanas disponíveis
+  const wsel = document.getElementById('digitalWeekSelect');
+  if (wsel) {
+    const ws = digitalWeeks();
+    wsel.innerHTML = ws.length ? ws.map(w => `<option value="${w}" ${w === week ? 'selected' : ''}>${w}</option>`).join('') : '<option value="">Sem semanas</option>';
+  }
+  if (!hasData) return;
+
+  const sel = document.getElementById('campaignSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Seleciona uma campanha...</option>' + names.map(n => {
+    const d = digitalCampaignData(week, n);
+    return `<option value="${escHtml(n)}" ${n === current ? 'selected' : ''}>${escHtml(n)} (${d.located.length}/${d.total})</option>`;
+  }).join('');
+  if (!sel.value) document.getElementById('mapStats').textContent = `Semana ${week}: ${names.length} campanha${names.length === 1 ? '' : 's'} digitais. Seleciona uma para a ver no mapa`;
+}
+
+function showDigitalCampaign(name) {
+  const week = digitalWeekInUse();
+  const d = week ? digitalCampaignData(week, name) : null;
+  clearMapMarkers();
+  if (!d || !leafletMap) return;
+  const bounds = [];
+  d.groups.forEach(gp => {
+    const marker = L.circleMarker([gp.lat, gp.lng], {
+      radius: 7, fillColor: tipoColor(gp.tipo), color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.85
+    }).addTo(leafletMap);
+    const gmaps = `https://www.google.com/maps/search/?api=1&query=${gp.lat},${gp.lng}`;
+    const shown = gp.codes.slice(0, 6).join(', ') + (gp.codes.length > 6 ? ` +${gp.codes.length - 6}` : '');
+    const addr = [gp.end, gp.end2].filter(Boolean).join(' · ');
+    marker.bindPopup(`
+      <strong>${escHtml(shown)}</strong> <span style="color:#86868b">(${tipoLabelPt(gp.tipo)})</span><br>
+      <span style="color:#86868b">${escHtml(addr)}</span><br>
+      ${gp.ref ? `<span style="color:#86868b; font-size:11px;">${escHtml(gp.ref)}</span><br>` : ''}
+      <span style="font-size:12px;">${gp.codes.length} face${gp.codes.length === 1 ? '' : 's'} nesta campanha</span><br>
+      <a href="${gmaps}" target="_blank" rel="noopener" style="display:inline-block; margin-top:6px; color:#0071e3; font-weight:600; text-decoration:none;">📍 Abrir no Google Maps</a>
+    `);
+    mapMarkers.push(marker);
+    bounds.push([gp.lat, gp.lng]);
+  });
+  if (bounds.length) leafletMap.fitBounds(bounds, { padding: [30, 30] });
+
+  _missingFor = name;
+  const warn = d.expected && d.located.length !== d.expected;
+  document.getElementById('mapStats').innerHTML =
+    `<strong style="color:var(--text)">${escHtml(name)}</strong> — <span style="color:var(--accent); font-weight:600">${d.groups.length} locais · ${d.located.length} de ${d.total} faces</span>` +
+    (d.missing.length ? ` · <a href="#" onclick="openMissingFaces(); return false;" style="color:var(--orange); font-weight:600; text-decoration:none;">${d.missing.length} sem localização</a>` : '') +
+    (warn ? `<div style="color:var(--orange); font-size:12px; margin-top:4px;">O nome do ficheiro indica ${d.expected} mupis em Lisboa; a app localizou ${d.located.length}.</div>` : '');
+}
+
+function filterDigitalMap() {
+  const name = document.getElementById('campaignSelect').value;
+  if (!name) {
+    clearMapMarkers();
+    renderDigitalMapView();
+    return;
+  }
+  showDigitalCampaign(name);
+}
+
+function openMissingFaces() {
+  const week = digitalWeekInUse();
+  const d = week && _missingFor ? digitalCampaignData(week, _missingFor) : null;
+  if (!d) return;
+  document.getElementById('facesTitle').textContent = `Sem localização — ${_missingFor}`;
+  const tomi = d.missing.filter(x => x.tomi), outras = d.missing.filter(x => !x.tomi);
+  const row = x => `<div class="station-row"><span style="color:var(--muted); font-size:12px;">${escHtml(x.face)}</span> ${escHtml(x.desc)}</div>`;
+  let html = '';
+  if (outras.length) html += `<div class="link-section" style="margin-top:0">Sem correspondência no master (${outras.length})</div><div style="font-size:12px; color:var(--muted); margin-bottom:6px;">Outras cidades (por exemplo Porto) ou códigos que ainda não estão no master.</div>` + outras.map(row).join('');
+  if (tomi.length) html += `<div class="link-section"${outras.length ? '' : ' style="margin-top:0"'}>Tomi (${tomi.length})</div><div style="font-size:12px; color:var(--muted); margin-bottom:6px;">Os Tomi não constam no master.</div>` + tomi.map(row).join('');
+  document.getElementById('facesBody').innerHTML = html;
+  openSheet('facesSheet');
+}
+
+// ══════════════════════════════════════════════════════════════
 // POP-UP "LOCAIS" (só nomes das estações Metro/IP)
 // ══════════════════════════════════════════════════════════════
 function openStations(id) {
@@ -2885,7 +3321,7 @@ function initLeafletMap() {
 
     // Show selected campaign if any
     const sel = document.getElementById('campaignSelect');
-    if (sel && sel.value) showMapCampaign(sel.value);
+    if (sel && sel.value) { if (state.mapMode === 'digital') showDigitalCampaign(sel.value); else showMapCampaign(sel.value); }
   }, 300);
 }
 
@@ -2916,6 +3352,9 @@ function mapIdleText(n) {
 }
 
 function renderMapView() {
+  syncMapMode();
+  if (state.mapMode === 'digital') { renderDigitalMapView(); return; }
+  const mb = document.getElementById('mapEmptyBtn'); if (mb) mb.style.display = 'none';
   const campanhas = state.mapData || {};
   const names = Object.keys(campanhas).filter(n => findMapPool(n).length > 0).sort();
   const hasData = names.length > 0;
@@ -2949,6 +3388,7 @@ function renderMapView() {
 }
 
 function filterMap() {
+  if (state.mapMode === 'digital') { filterDigitalMap(); return; }
   const sel = document.getElementById('campaignSelect');
   const name = sel.value;
   if (!name) {
