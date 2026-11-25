@@ -466,6 +466,11 @@
   .edit-adj { font-size:12px; color:var(--orange); background:var(--orange-light); border-radius:var(--radius-sm); padding:9px 12px; margin-top:14px; line-height:1.5; }
   .edit-adj button { background:none; border:none; color:var(--accent); font-size:12px; font-weight:600; cursor:pointer; padding:0; margin-left:4px; }
   .edit-meta { font-size:11px; color:var(--muted); margin-top:14px; }
+  .edit-copy { margin-top:18px; padding-top:14px; border-top:1px solid var(--border); }
+  .edit-copy-row { display:flex; gap:8px; align-items:center; }
+  .edit-copy-row select { flex:1; margin:0; }
+  .edit-copy-row button { flex:0 0 auto; white-space:nowrap; }
+  .copy-tag { color:var(--accent); font-weight:600; }
   .link-section { font-size:12px; color:var(--muted); font-weight:600; margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.03em; }
 
 
@@ -853,7 +858,7 @@ function saveState() {
 
 // ── CAMPAIGN ID ────────────────────────────────────────────────
 function campaignId(c) {
-  return `${c.venda}_${c.suporte}_${c.rede || ''}`.replace(/[^a-zA-Z0-9_]/g, '_');
+  return `${c.venda}_${c.suporte}_${c.rede || ''}${c.idSfx || ''}`.replace(/[^a-zA-Z0-9_]/g, '_');
 }
 
 // ── FILE IMPORT ────────────────────────────────────────────────
@@ -970,7 +975,7 @@ function processRows(rows, weekName) {
     const colAupper = colA.toUpperCase();
     const isValidRef = colAupper.startsWith('V.') || colAupper === 'SV' || colA === '';
     // Referência incompleta (V. sem número) ou texto inválido com campanha válida → SV
-    const isIncomplete = colAupper === 'V.' || /^falta\s*venda/i.test(colA);
+    const isIncomplete = colAupper === 'V.' || /^(falta|sem|s\/)\s*venda/i.test(colA) || colAupper === 'N/A';
 
     if (!isValidRef && !isIncomplete && colA !== '') { skipped++; continue; }
     if (!colA && !colI) { skipped++; continue; }
@@ -1007,7 +1012,7 @@ function processRows(rows, weekName) {
   }
   state.weeks[weekName].campaigns = [
     ...state.weeks[weekName].campaigns.filter(c => c.subtype === 'analog'),
-    ...state.weeks[weekName].campaigns.filter(c => c.manual && c.subtype !== 'analog' && !campaigns.some(n => normKey(n.venda) === normKey(c.venda))),
+    ...state.weeks[weekName].campaigns.filter(c => c.subtype !== 'analog' && ((c.manual && !campaigns.some(n => normKey(n.venda) === normKey(c.venda))) || (!c.manual && c.copied && !campaigns.some(n => sameCampaignInFile(c, n))))),
     ...campaigns
   ];
   state.weeks[weekName].loaded = new Date().toLocaleDateString('pt');
@@ -1394,7 +1399,7 @@ function buildCard(c, zone) {
           ${checkHtml}
           <div class="card-info">
             <div class="card-name">${escHtml(c.campanha || '—')}</div>
-            <div class="card-sub">${escHtml(c.venda)} · ${escHtml(suporteLabel(c))}</div>
+            <div class="card-sub">${escHtml(c.venda)} · ${escHtml(suporteLabel(c))}${c.copiedFrom ? ` · <span class="copy-tag">↪ ${escHtml(c.copiedFrom)}</span>` : ''}</div>
           </div>
           ${missBadge}
         </div>
@@ -1811,7 +1816,7 @@ function processAnalogRows(rows, weekName) {
     // Normalizar referências SV / V. incompleto / N/A → SV1, SV2...
     const vendaUp = venda.toUpperCase();
     const isSV = vendaUp === 'SV' || venda === '' ||
-                 vendaUp === 'V.' || vendaUp === 'N/A' || /^falta\s*venda/i.test(venda);
+                 vendaUp === 'V.' || vendaUp === 'N/A' || /^(falta|sem|s\/)\s*venda/i.test(venda);
     if (isSV) {
       svCounter++;
       venda = `SV${svCounter}`;
@@ -1838,7 +1843,7 @@ function processAnalogRows(rows, weekName) {
   // Remover analógicos anteriores desta semana e adicionar os novos
   state.weeks[weekName].campaigns = [
     ...state.weeks[weekName].campaigns.filter(c => c.subtype !== 'analog'),
-    ...state.weeks[weekName].campaigns.filter(c => c.manual && c.subtype === 'analog' && !campaigns.some(n => normKey(n.venda) === normKey(c.venda))),
+    ...state.weeks[weekName].campaigns.filter(c => c.subtype === 'analog' && ((c.manual && !campaigns.some(n => normKey(n.venda) === normKey(c.venda))) || (!c.manual && c.copied && !campaigns.some(n => sameCampaignInFile(c, n))))),
     ...campaigns
   ];
   state.activeWeek = weekName;
@@ -1974,7 +1979,7 @@ function classifyDigital(formato, rede, notas, campanha) {
     tipo = 'flagship'; r = 2;
   } else if (f.includes('LED')) {
     // Ecrãs Led's — a rede distingue Flagship / 4x3 / normal
-    if (rd.includes('FLAGSHIP') || rd.includes('FLASG')) { tipo = 'flagship'; r = 2; }
+    if (rd.includes('FLAGSHIP') || rd.includes('FLAGH') || rd.includes('FLASG')) { tipo = 'flagship'; r = 2; }
     else if (rd.includes('4X3'))                         { tipo = '4x3';      r = 3; }
     else                                                 { tipo = 'leds';     m = 4; ip = 2; }
   } else if (f.includes('3') && f.includes('ECRA')) {
@@ -2488,8 +2493,81 @@ function openEdit(id) {
       <button class="btn btn-primary" style="flex:2" onclick="saveEdit()">Guardar</button>
       ${c.edited ? '<button class="btn btn-ghost" style="flex:1" onclick="resetEdit()">Repor automático</button>' : ''}
     </div>
-    <div class="edit-meta">${escHtml(c.venda)} · ${escHtml(suporteLabel(c))}</div>`;
+    ${copyBlockHtml(c)}
+    <div class="edit-meta">${escHtml(c.venda)} · ${escHtml(suporteLabel(c))}${c.copiedFrom ? ' · copiada da ' + escHtml(c.copiedFrom) : ''}</div>`;
   openSheet('editSheet');
+}
+
+// ══════════════════════════════════════════════════════════════
+// COPIAR CAMPANHA PARA OUTRA SEMANA (atraso na afixação / continuação)
+// Fica nas duas semanas; leva o progresso e as edições; depois é independente.
+// ══════════════════════════════════════════════════════════════
+function isSvVenda(v) { return /^SV\d*$/i.test(String(v || '').trim()); }
+
+// A campanha copiada (c) já veio no ficheiro importado (n)?
+function sameCampaignInFile(c, n) {
+  if ((n.suporte || '') !== (c.suporte || '') || (n.rede || '') !== (c.rede || '')) return false;
+  if (!isSvVenda(c.venda) && normKey(n.venda) === normKey(c.venda)) return true;
+  return normKey(origName(n)) === normKey(origName(c));
+}
+
+function otherLoadedWeeks() {
+  return Object.keys(state.weeks || {})
+    .filter(w => w !== state.activeWeek && (state.weeks[w].campaigns || []).length)
+    .sort((a, b) => (parseInt(b.slice(1)) || 0) - (parseInt(a.slice(1)) || 0));
+}
+
+function copyBlockHtml(c) {
+  const weeks = otherLoadedWeeks();
+  if (!weeks.length) {
+    return `<div class="edit-copy"><label class="edit-label" style="margin-top:0">Copiar para outra semana</label>
+      <div class="alias-hint">Carrega primeiro a semana de destino para poderes copiar esta campanha.</div></div>`;
+  }
+  const next = 'S' + ((parseInt(String(state.activeWeek).slice(1)) || 0) + 1);
+  const def = weeks.includes(next) ? next : weeks[0];
+  return `<div class="edit-copy"><label class="edit-label" style="margin-top:0">Copiar para outra semana</label>
+    <div class="edit-copy-row">
+      <select class="edit-input" id="copyWeek">${weeks.map(w => `<option value="${w}"${w === def ? ' selected' : ''}>${w}</option>`).join('')}</select>
+      <button class="btn btn-ghost" onclick="copyCampaignToWeek()">↪ Copiar</button>
+    </div>
+    <div class="alias-hint">Fica nas duas semanas e leva as fotos já tiradas e as edições. Depois cada semana segue o seu caminho.</div></div>`;
+}
+
+function copyCampaignToWeek(destArg) {
+  const src = findActiveCampaign(window._editId);
+  if (!src) return;
+  const dest = destArg || (document.getElementById('copyWeek') || {}).value;
+  const from = state.activeWeek;
+  if (!dest || !state.weeks[dest] || dest === from) { showToast('Escolhe a semana de destino'); return; }
+  const srcId = campaignId(src);
+
+  const clone = JSON.parse(JSON.stringify(src));
+  clone.copied = true;
+  clone.copiedFrom = from;
+  clone.idSfx = '_de' + from.replace(/\D/g, '');
+  delete clone.adj;
+  const newId = campaignId(clone);
+
+  // já existe na semana de destino?
+  const exists = state.weeks[dest].campaigns.some(d =>
+    campaignId(d) === newId ||
+    ((d.suporte || '') === (src.suporte || '') && (d.rede || '') === (src.rede || '') &&
+     ((!isSvVenda(src.venda) && normKey(d.venda) === normKey(src.venda)) || normKey(origName(d)) === normKey(origName(src)))));
+  if (exists) { showToast(`Já existe na ${dest}`); return; }
+
+  // progresso e edições seguem (cópia, não ligação)
+  const prog = state.progress[srcId];
+  if (prog) state.progress[newId] = { ...prog };
+  const e = state.edits[from + '|' + srcId];
+  if (e) state.edits[dest + '|' + newId] = JSON.parse(JSON.stringify(e));
+
+  state.weeks[dest].campaigns.push(clone);
+  if (clone.subtype === 'analog') applyLocationAdjustments(dest); else applyDigitalRules(dest);
+  saveState();
+  closeSheet('editSheet');
+  renderAll();
+  const done = prog ? ((prog.r || 0) + (prog.m || 0) + (prog.ip || 0)) : 0;
+  showToast(`✓ Copiada para a ${dest}` + (done ? ` (com ${done} foto${done === 1 ? '' : 's'} já feita${done === 1 ? '' : 's'})` : ''));
 }
 
 function adjFromEdit(id, off) {
